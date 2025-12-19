@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* === ESTILOS PERSONALIZADOS === */
+.glass-nav {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(0,0,0,0.05);
+}
+
+.text-gradient {
+    background: linear-gradient(135deg, #FF6B35 0%, #FF9F1C 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.bg-gradient-brand {
+    background: linear-gradient(135deg, #FF6B35 0%, #FF9F1C 100%);
+}
+
+/* === AUTOCOMPLETADO (MÓVIL FRIENDLY) === */
+#suggestions-list {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 8px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    z-index: 100;
+    max-height: 200px; /* Menor altura en móvil */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+}
+
+/* Scrollbar invisible pero funcional en móvil */
+#suggestions-list::-webkit-scrollbar { width: 4px; }
+#suggestions-list::-webkit-scrollbar-track { background: transparent; }
+#suggestions-list::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+.suggestion-item {
+    padding: 14px 16px; /* Más espacio para el dedo */
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background-color 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover, .suggestion-item:active { background-color: #fff7ed; }
+
+/* === ANIMACIONES === */
+.reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: all 0.6s ease-out;
+}
+.reveal.active {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Modal */
+.modal {
+    transition: opacity 0.3s ease-in-out;
+    opacity: 0;
+    pointer-events: none;
+}
+.modal.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Loader */
+.loader {
+    border: 3px solid #f3f3f3;
+    border-radius: 50%;
+    border-top: 3px solid #FF6B35;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
