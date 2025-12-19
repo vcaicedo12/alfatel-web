@@ -6,25 +6,21 @@
     <title>ALFATEL | Internet de Fibra Óptica y Aire</title>
     <meta name="description" content="Internet de fibra óptica de ultra velocidad y cobertura rural por antena.">
     
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body class="bg-brand-light text-slate-600 antialiased selection:bg-brand-orange selection:text-white overflow-x-hidden">
 
-    <!-- Navbar -->
     <header class="fixed w-full top-0 z-40 glass-nav transition-all duration-300" id="navbar">
         <div class="container mx-auto px-4 md:px-6 py-3 md:py-4">
             <div class="flex justify-between items-center">
                 
-                <!-- Logo -->
                 <a href="#" class="flex items-center gap-2 group">
                     <div class="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-gradient-brand flex items-center justify-center text-white font-bold text-lg md:text-xl shadow-lg shadow-orange-500/30 transition-transform group-hover:scale-110">A</div>
                     <span class="text-xl md:text-2xl font-bold text-slate-800 tracking-tight">ALFATEL</span>
                 </a>
 
-                <!-- Menú Desktop -->
                 <nav class="hidden md:flex items-center space-x-8">
                     <a href="#inicio" class="text-sm font-semibold text-slate-600 hover:text-brand-orange transition-colors">Inicio</a>
                     <a href="#fibra" class="text-sm font-semibold text-slate-600 hover:text-brand-orange transition-colors">Fibra Óptica</a>
@@ -35,7 +31,6 @@
                     <a href="#contacto" class="px-6 py-2.5 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Contactar</a>
                 </nav>
 
-                <!-- Botón Hamburguesa (Móvil) -->
                 <button id="mobile-menu-btn" onclick="toggleMenu()" class="md:hidden p-2 rounded-lg text-slate-800 hover:bg-slate-100 focus:outline-none relative z-50">
                     <span id="icon-hamburger" class="block">
                         <i data-lucide="menu" class="w-8 h-8"></i>
@@ -48,15 +43,11 @@
         </div>
     </header>
 
-    <!-- ZONA DE CLIENTES (MODAL) -->
     <div id="clientModal" class="modal fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <!-- Fondo oscuro -->
         <div class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm" onclick="toggleModal()"></div>
         
-        <!-- Tarjeta del Modal -->
         <div class="bg-white rounded-t-[30px] sm:rounded-3xl shadow-2xl w-full max-w-md relative z-10 transform transition-all scale-100 max-h-[90vh] overflow-y-auto">
             
-            <!-- Cabecera -->
             <div class="bg-gradient-brand p-6 text-white text-center relative rounded-t-[30px] sm:rounded-t-3xl">
                 <button onclick="toggleModal()" class="absolute top-4 right-4 bg-white/20 p-1 rounded-full text-white hover:bg-white/30 transition-colors">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -68,7 +59,6 @@
                 <p class="text-white/90 text-sm mt-1">Ingresa tu número de Cédula.</p>
             </div>
             
-            <!-- Cuerpo del Formulario -->
             <div class="p-6 md:p-8 pb-10">
                 <form id="clientForm" onsubmit="handleClientSearch(event)">
                     <div class="mb-4 relative z-50">
@@ -88,7 +78,6 @@
                         </div>
                     </div>
                     
-                    <!-- CHECKBOX LEGAL (Enlace a politicas.html) -->
                     <div class="mb-6 flex items-start gap-3">
                         <div class="flex items-center h-5">
                             <input id="terms" name="terms" type="checkbox" class="w-4 h-4 border border-slate-300 rounded bg-gray-50 focus:ring-3 focus:ring-orange-300" required>
@@ -105,10 +94,8 @@
                     </button>
                 </form>
 
-                <!-- Área de Resultados (Oculta por defecto) -->
                 <div id="resultArea" class="hidden mt-6 pt-6 border-t border-slate-100 relative z-0">
                     
-                    <!-- Éxito: Cliente Encontrado -->
                     <div id="successState" class="hidden">
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
@@ -139,7 +126,6 @@
                         </button>
                     </div>
                     
-                    <!-- Error: No Encontrado -->
                     <div id="errorState" class="hidden text-center py-6 bg-slate-50 rounded-2xl border border-slate-100">
                         <div class="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 mx-auto mb-3">
                             <i data-lucide="alert-triangle" class="w-7 h-7"></i>
@@ -157,7 +143,6 @@
         </div>
     </div>
 
-    <!-- Hero Section -->
     <section id="inicio" class="relative pt-28 pb-20 md:pt-48 md:pb-48 overflow-hidden">
         <div class="absolute inset-0 bg-slate-900">
             <div class="absolute inset-0 bg-hero-pattern bg-cover bg-center opacity-40 mix-blend-overlay"></div>
@@ -186,7 +171,6 @@
         </div>
     </section>
 
-    <!-- Stats Section -->
     <div class="relative z-20 -mt-10 md:-mt-24 px-4 md:px-6">
         <div class="container mx-auto max-w-5xl">
             <div class="bg-white rounded-2xl md:rounded-3xl shadow-xl shadow-slate-900/10 p-6 md:p-12 border border-slate-100 reveal relative overflow-hidden">
@@ -225,7 +209,6 @@
         </div>
     </div>
 
-    <!-- SECCIÓN 1: PLANES FIBRA ÓPTICA -->
     <section id="fibra" class="pt-16 pb-12 bg-white">
         <div class="container mx-auto px-4 md:px-6">
             <div class="text-center mb-12 reveal">
@@ -237,7 +220,7 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center max-w-6xl mx-auto">
-                <div class="bg-white rounded-3xl p-6 md:p-8 shadow-lg border border-slate-100 hover:shadow-2xl transition-all reveal">
+                <div class="plan-card">
                     <h3 class="text-xl md:text-2xl font-bold text-slate-900">Alfatel Hogar</h3>
                     <div class="flex items-baseline my-4"><span class="text-4xl md:text-5xl font-extrabold text-slate-900">$15</span><span class="text-slate-500 ml-1">/mes</span></div>
                     <div class="text-xs md:text-sm font-bold text-white bg-slate-900 px-4 py-2 rounded-xl inline-block mb-6">200 MEGAS</div>
@@ -245,7 +228,7 @@
                         <li class="flex items-start gap-3 text-slate-600 text-sm"><i data-lucide="check" class="w-5 h-5 text-brand-orange shrink-0"></i> Fibra Óptica Pura</li>
                         <li class="flex items-start gap-3 text-slate-600 text-sm"><i data-lucide="check" class="w-5 h-5 text-brand-orange shrink-0"></i> Router Dual Band</li>
                     </ul>
-                    <button onclick="contratarPlan('Fibra Hogar 200 Megas - $15')" class="w-full py-3 rounded-xl border-2 border-slate-900 text-slate-900 font-bold hover:bg-slate-900 hover:text-white active:bg-slate-800 transition-colors">Solicitar Plan</button>
+                    <button onclick="contratarPlan('Fibra Hogar 200 Megas - $15')" class="btn-outline">Solicitar Plan</button>
                 </div>
 
                 <div class="relative bg-slate-50 rounded-3xl p-6 md:p-8 shadow-xl border border-orange-200 transform md:scale-105 z-10 reveal delay-100 mt-4 md:mt-0">
@@ -261,7 +244,7 @@
                         <li class="flex items-start gap-3 text-slate-600 text-sm"><i data-lucide="check" class="w-5 h-5 text-brand-orange shrink-0"></i> Mayor Cobertura WiFi</li>
                         <li class="flex items-start gap-3 text-slate-600 text-sm"><i data-lucide="check" class="w-5 h-5 text-brand-orange shrink-0"></i> Streaming 4K</li>
                     </ul>
-                    <button onclick="contratarPlan('Fibra Hogar Plus 400 Megas - $20')" class="w-full py-4 rounded-xl bg-gradient-brand text-white font-bold shadow-lg shadow-orange-500/30 hover:opacity-90 active:scale-95 transition-all">¡Lo Quiero!</button>
+                    <button onclick="contratarPlan('Fibra Hogar Plus 400 Megas - $20')" class="btn-primary">¡Lo Quiero!</button>
                 </div>
 
                 <div class="bg-slate-900 rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-800 mt-4 md:mt-0 reveal delay-200">
@@ -286,7 +269,6 @@
         </div>
     </section>
 
-    <!-- SECCIÓN 2: PLANES POR ANTENA (RURAL) -->
     <section id="antena" class="py-16 md:py-24 bg-slate-50 border-t border-slate-200">
         <div class="container mx-auto px-4 md:px-6">
             <div class="text-center mb-12 reveal">
@@ -321,7 +303,6 @@
         </div>
     </section>
 
-    <!-- ALFACAM -->
     <section id="alfacam" class="py-16 md:py-24 bg-slate-900 relative overflow-hidden">
         <div class="absolute top-0 right-0 w-full md:w-1/2 h-full bg-gradient-to-l from-brand-orange/10 to-transparent pointer-events-none"></div>
         <div class="container mx-auto px-4 md:px-6 relative z-10">
@@ -349,7 +330,6 @@
         </div>
     </section>
 
-    <!-- Footer -->
     <footer id="contacto" class="bg-slate-950 text-slate-400 py-12 md:py-16 border-t border-slate-900">
         <div class="container mx-auto px-4 md:px-6">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 mb-12 text-center md:text-left">
@@ -383,26 +363,21 @@
             <div class="border-t border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs md:text-sm">
                 <p>&copy; 2024 ALFATEL.</p>
                 <div class="flex gap-6">
-                    <!-- ENLACE EXTERNO A POLITICAS.HTML -->
                     <a href="politicas.html" target="_blank" class="hover:text-white hover:underline">Términos y Privacidad</a>
                 </div>
             </div>
         </div>
     </footer>
 
-    <!-- Botón Flotante WhatsApp -->
     <button onclick="redirigirWhatsapp()" class="fixed bottom-5 right-5 w-14 h-14 md:w-16 md:h-16 bg-[#25D366] rounded-full flex items-center justify-center text-white shadow-2xl hover:scale-110 active:scale-90 transition-transform z-50 group">
         <div class="absolute inset-0 rounded-full bg-[#25D366] animate-ping opacity-20"></div>
         <svg viewBox="0 0 24 24" class="w-7 h-7 md:w-8 md:h-8 fill-current" xmlns="http://www.w3.org/2000/svg"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
         <span class="absolute right-full mr-4 bg-white text-slate-800 px-3 py-1 rounded-lg text-sm font-bold shadow-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden md:block">¡Chatea con nosotros!</span>
     </button>
     
-    <!-- Script Principal -->
     <script type="module" src="/src/main.js"></script>
 
-    <!-- MENÚ MÓVIL AL FINAL (Solución Z-Index) -->
     <div id="mobile-menu" class="fixed inset-0 bg-white/95 backdrop-blur-xl z-[90] transform translate-x-full transition-transform duration-300 md:hidden flex flex-col justify-center items-center gap-8 opacity-0 pointer-events-none">
-        <!-- Botón Cerrar -->
         <button onclick="toggleMenu()" class="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:text-brand-orange transition-colors">
             <i data-lucide="x" class="w-8 h-8"></i>
         </button>
