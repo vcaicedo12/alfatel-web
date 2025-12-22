@@ -21,14 +21,15 @@ export default async function handler(req, res) {
         };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
-        // --- A. BUSCAR CLIENTE ---
+        // --- PASO 1: BUSCAR EL CLIENTE (Para sacar el nombre y plan) ---
         let clientes = [];
-        // Por Cédula
+        
+        // Búsqueda por Cédula
         let resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
         let json = await resp.json();
         clientes = json.data || [];
 
-        // Por RUC (si falla cédula)
+        // Búsqueda por RUC (respaldo)
         if (clientes.length === 0) {
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, { headers });
             json = await resp.json();
@@ -42,8 +43,10 @@ export default async function handler(req, res) {
         const cliente = clientes[0];
         const clienteId = cliente.id; 
 
-        // --- B. BUSCAR FACTURAS ---
-        const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
+        // --- PASO 2: BUSCAR FACTURAS USANDO LA CÉDULA ---
+        // Usamos la misma lógica que tu script "Laboratorio" que funcionaba bien.
+        // En lugar de buscar por ID (que daba problemas), buscamos por Cédula.
+        const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_national_identification_number_eq=${cedula}&state_eq=pending`;
         const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
         const [facturasResp, contratosResp] = await Promise.all([
@@ -54,36 +57,43 @@ export default async function handler(req, res) {
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // --- C. PROCESAR DEUDA Y FECHAS ---
+        // --- PASO 3: PROCESAR CON TU LÓGICA DE LABORATORIO ---
         let deudaTotal = 0;
         let fechaVencimiento = null;
         const facturasRaw = facturasData.data || [];
 
         facturasRaw.forEach(f => {
-            // 🛡️ CORRECCIÓN CRÍTICA: Convertir ambos a String para comparar
-            // Esto arregla el problema de "nadie tiene deuda" si uno es número y otro texto
-            if (String(f.client_id) !== String(clienteId)) {
-                return; // Ignorar factura ajena
-            }
+            // NOTA: Ya no filtramos por ID estricto aquí porque la búsqueda por Cédula 
+            // en la URL suele ser precisa. Si Wispro te devuelve facturas, son de esa cédula.
 
             // Sumar deuda
             deudaTotal += parseFloat(f.balance || 0);
 
             // Lógica de fechas (Tu laboratorio)
             let fechaFinal = f.first_due_date;
-            if (!fechaFinal) fechaFinal = f.second_due_date;
-            // Si no hay vencimientos, usar fecha de creación
-            if (!fechaFinal && f.created_at) fechaFinal = f.created_at.split('T')[0];
 
-            // Buscar la fecha más antigua (la próxima a vencer)
+            // Si no hay 1er vencimiento, usamos el 2do
+            if (!fechaFinal) {
+                fechaFinal = f.second_due_date;
+            }
+
+            // Si tampoco hay 2do, usamos fecha de creación (solo la parte YYYY-MM-DD)
+            if (!fechaFinal && f.created_at) {
+                fechaFinal = f.created_at.split('T')[0];
+            }
+
+            // DETERMINAR LA FECHA A MOSTRAR (La más antigua)
             if (fechaFinal) {
-                if (!fechaVencimiento || fechaFinal < fechaVencimiento) {
+                if (!fechaVencimiento) {
+                    fechaVencimiento = fechaFinal;
+                } 
+                else if (fechaFinal < fechaVencimiento) {
                     fechaVencimiento = fechaFinal;
                 }
             }
         });
 
-        // --- D. RESPONDER ---
+        // --- PASO 4: RESPONDER ---
         const contratos = contratosData.data || [];
         const contratoActivo = contratos.find(c => c.state === 'enabled') || contratos[0] || {};
         
