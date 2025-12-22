@@ -10,9 +10,16 @@ export default async function handler(req, res) {
     }
 
     const API_TOKEN = process.env.WISPRO_API_TOKEN;
-    const { cedula } = req.query;
+    
+    // Obtenemos la cédula
+    let { cedula } = req.query;
 
     if (!cedula) return res.status(400).json({ error: 'Cédula requerida' });
+
+    // --- LIMPIEZA DE CÉDULA (NUEVO) ---
+    // Esto borra cualquier espacio en blanco, tabulación o salto de línea.
+    // Ejemplo: " 17 500 20 " se convierte automáticamente en "1750020"
+    cedula = cedula.toString().replace(/\s+/g, '');
 
     try {
         const headers = { 
@@ -21,15 +28,15 @@ export default async function handler(req, res) {
         };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
-        // --- PASO 1: BUSCAR EL CLIENTE (Para sacar el nombre y plan) ---
+        // --- PASO 1: BUSCAR EL CLIENTE ---
         let clientes = [];
         
-        // Búsqueda por Cédula
+        // Búsqueda por Cédula (Ya limpia)
         let resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
         let json = await resp.json();
         clientes = json.data || [];
 
-        // Búsqueda por RUC (respaldo)
+        // Búsqueda por RUC (Si falla cédula)
         if (clientes.length === 0) {
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, { headers });
             json = await resp.json();
@@ -43,9 +50,8 @@ export default async function handler(req, res) {
         const cliente = clientes[0];
         const clienteId = cliente.id; 
 
-        // --- PASO 2: BUSCAR FACTURAS USANDO LA CÉDULA ---
-        // Usamos la misma lógica que tu script "Laboratorio" que funcionaba bien.
-        // En lugar de buscar por ID (que daba problemas), buscamos por Cédula.
+        // --- PASO 2: BUSCAR FACTURAS USANDO LA CÉDULA LIMPIA ---
+        // Al usar la variable 'cedula' que ya limpiamos arriba, aseguramos que Wispro la reconozca.
         const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_national_identification_number_eq=${cedula}&state_eq=pending`;
         const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
@@ -57,32 +63,29 @@ export default async function handler(req, res) {
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // --- PASO 3: PROCESAR CON TU LÓGICA DE LABORATORIO ---
+        // --- PASO 3: PROCESAR CON LÓGICA DE LABORATORIO ---
         let deudaTotal = 0;
         let fechaVencimiento = null;
         const facturasRaw = facturasData.data || [];
 
         facturasRaw.forEach(f => {
-            // NOTA: Ya no filtramos por ID estricto aquí porque la búsqueda por Cédula 
-            // en la URL suele ser precisa. Si Wispro te devuelve facturas, son de esa cédula.
+            // NOTA: Como buscamos por cédula limpia en la URL, confiamos en lo que devuelve Wispro.
 
             // Sumar deuda
             deudaTotal += parseFloat(f.balance || 0);
 
-            // Lógica de fechas (Tu laboratorio)
+            // Lógica de fechas (Laboratorio)
             let fechaFinal = f.first_due_date;
 
-            // Si no hay 1er vencimiento, usamos el 2do
             if (!fechaFinal) {
                 fechaFinal = f.second_due_date;
             }
 
-            // Si tampoco hay 2do, usamos fecha de creación (solo la parte YYYY-MM-DD)
             if (!fechaFinal && f.created_at) {
                 fechaFinal = f.created_at.split('T')[0];
             }
 
-            // DETERMINAR LA FECHA A MOSTRAR (La más antigua)
+            // DETERMINAR LA FECHA A MOSTRAR
             if (fechaFinal) {
                 if (!fechaVencimiento) {
                     fechaVencimiento = fechaFinal;
