@@ -1,6 +1,5 @@
-// api/consulta.js
 export default async function handler(req, res) {
-    // CORS
+    // 1. Configuración CORS (Permite que tu frontend se conecte)
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
@@ -22,15 +21,15 @@ export default async function handler(req, res) {
         };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
-        // 1. BUSCAR CLIENTE
+        // --- PASO 1: BUSCAR EL CLIENTE ---
         let clientes = [];
         
-        // Intento A: Cédula exacta
+        // Intento A: Por Cédula exacta
         let resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
         let json = await resp.json();
         clientes = json.data || [];
 
-        // Intento B: Si no encuentra, buscar por RUC
+        // Intento B: Por RUC (si no encontró por cédula)
         if (clientes.length === 0) {
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, { headers });
             json = await resp.json();
@@ -42,21 +41,14 @@ export default async function handler(req, res) {
         }
 
         const cliente = clientes[0];
-        const clienteId = cliente.id; // Guardamos el ID explícitamente
+        const clienteId = cliente.id; // ID Único del cliente
 
-        // --- VALIDACIÓN IMPORTANTE ---
-        // Si no tenemos ID, no podemos buscar facturas (evita traer todas)
-        if (!clienteId) {
-            console.error("Error: Cliente encontrado pero sin ID", cliente);
-            return res.status(500).json({ error: 'Error en datos del cliente' });
-        }
+        console.log(`✅ Cliente encontrado: ${cliente.name} (ID: ${clienteId})`);
 
-        console.log(`Cliente encontrado: ${cliente.name} (ID: ${clienteId})`);
-
-        // 2. BUSCAR FACTURAS Y CONTRATOS ESPECÍFICOS DE ESTE ID
-        // Usamos encodeURIComponent para evitar errores en la URL
-        const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${encodeURIComponent(clienteId)}&state_eq=pending`;
-        const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${encodeURIComponent(clienteId)}`;
+        // --- PASO 2: BUSCAR FACTURAS (Y FILTRARLAS MANUALMENTE) ---
+        // Pedimos las facturas pendientes filtradas por ID
+        const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
+        const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
         const [facturasResp, contratosResp] = await Promise.all([
             fetch(invoicesUrl, { headers }),
@@ -66,29 +58,32 @@ export default async function handler(req, res) {
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // Debug: Ver en los logs de Vercel qué está pasando
-        console.log(`Facturas encontradas para ID ${clienteId}: ${facturasData.data?.length || 0}`);
-
-        // 3. PROCESAR DATOS
+        // --- AQUÍ ESTÁ LA CORRECCIÓN CLAVE ---
         let deudaTotal = 0;
         let fechaVencimiento = null;
+        const facturasRaw = facturasData.data || [];
 
-        // Sumar SOLO si facturasData.data es un array válido
-        if (Array.isArray(facturasData.data)) {
-            facturasData.data.forEach(f => {
-                // Doble verificación: asegurar que la factura pertenece al cliente (por si acaso la API falló el filtro)
-                // Nota: Wispro suele devolver el objeto cliente dentro de la factura o el client_id
-                if (f.client_id && String(f.client_id) !== String(clienteId)) {
-                    return; // Ignorar factura si no coincide el ID (Protección extra)
-                }
-                
-                deudaTotal += parseFloat(f.balance || 0);
-                
-                const fecha = f.first_due_date || f.created_at;
-                if (!fechaVencimiento || fecha < fechaVencimiento) fechaVencimiento = fecha;
-            });
-        }
+        console.log(`🔎 Facturas recibidas de la API: ${facturasRaw.length}`);
 
+        facturasRaw.forEach(f => {
+            // 🛡️ FILTRO DE SEGURIDAD ESTRICTO 🛡️
+            // Comparamos el ID de la factura con el ID del cliente.
+            // Usamos String() para asegurar que comparamos texto con texto.
+            if (String(f.client_id) !== String(clienteId)) {
+                console.warn(`⚠️ Factura ajena detectada e ignorada. Pertenece a ID: ${f.client_id}`);
+                return; // ¡SALTAR ESTA FACTURA!
+            }
+
+            // Si el ID coincide, sumamos la deuda
+            deudaTotal += parseFloat(f.balance || 0);
+            
+            const fecha = f.first_due_date || f.created_at;
+            if (!fechaVencimiento || fecha < fechaVencimiento) fechaVencimiento = fecha;
+        });
+
+        console.log(`💰 Deuda Real Calculada: $${deudaTotal}`);
+
+        // --- PASO 3: RESPONDER AL FRONTEND ---
         const contratos = contratosData.data || [];
         const contratoActivo = contratos.find(c => c.state === 'enabled') || contratos[0] || {};
         
@@ -97,13 +92,13 @@ export default async function handler(req, res) {
             estado: contratoActivo.state || 'desconocido',
             plan: contratoActivo.plan_name || cliente.plan_name || 'Plan Básico',
             ip: contratoActivo.ip || '---',
-            deuda: deudaTotal,
+            deuda: deudaTotal, // Deuda ya filtrada y correcta
             fechaVencimiento: fechaVencimiento,
             encontrado: true
         });
 
     } catch (error) {
-        console.error("Error en API:", error);
+        console.error("Error crítico en API:", error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 }
