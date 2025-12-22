@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-    // 1. Configuración CORS (Igual que siempre)
+    // 1. Configuración de Seguridad (CORS)
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
@@ -21,15 +21,14 @@ export default async function handler(req, res) {
         };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
-        // --- PASO 1: BUSCAR EL CLIENTE ---
+        // --- A. BUSCAR CLIENTE ---
         let clientes = [];
-        
-        // Búsqueda principal
+        // Por Cédula
         let resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
         let json = await resp.json();
         clientes = json.data || [];
 
-        // Búsqueda de respaldo (RUC)
+        // Por RUC (si falla cédula)
         if (clientes.length === 0) {
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, { headers });
             json = await resp.json();
@@ -41,12 +40,9 @@ export default async function handler(req, res) {
         }
 
         const cliente = clientes[0];
-        const clienteId = cliente.id;
+        const clienteId = cliente.id; 
 
-        console.log(`✅ Cliente: ${cliente.name} (ID: ${clienteId})`);
-
-        // --- PASO 2: BUSCAR FACTURAS ---
-        // Traemos todas las pendientes de este ID
+        // --- B. BUSCAR FACTURAS ---
         const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
         const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
@@ -58,48 +54,36 @@ export default async function handler(req, res) {
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // --- PASO 3: PROCESAR CON TU LÓGICA DE LABORATORIO ---
+        // --- C. PROCESAR DEUDA Y FECHAS ---
         let deudaTotal = 0;
-        let fechaVencimiento = null; // Aquí guardaremos la fecha más antigua encontrada
+        let fechaVencimiento = null;
         const facturasRaw = facturasData.data || [];
 
         facturasRaw.forEach(f => {
-            // A) FILTRO DE SEGURIDAD (Para no mezclar clientes)
+            // 🛡️ CORRECCIÓN CRÍTICA: Convertir ambos a String para comparar
+            // Esto arregla el problema de "nadie tiene deuda" si uno es número y otro texto
             if (String(f.client_id) !== String(clienteId)) {
-                return; // Ignoramos si el ID no coincide
+                return; // Ignorar factura ajena
             }
 
-            // B) SUMAR DEUDA
+            // Sumar deuda
             deudaTotal += parseFloat(f.balance || 0);
 
-            // C) TU LÓGICA DE FECHAS (Tal cual tu script)
+            // Lógica de fechas (Tu laboratorio)
             let fechaFinal = f.first_due_date;
+            if (!fechaFinal) fechaFinal = f.second_due_date;
+            // Si no hay vencimientos, usar fecha de creación
+            if (!fechaFinal && f.created_at) fechaFinal = f.created_at.split('T')[0];
 
-            // Si no hay 1er vencimiento, usamos el 2do
-            if (!fechaFinal) {
-                fechaFinal = f.second_due_date;
-            }
-
-            // Si tampoco hay 2do, usamos fecha de creación (solo la parte YYYY-MM-DD)
-            if (!fechaFinal && f.created_at) {
-                fechaFinal = f.created_at.split('T')[0];
-            }
-
-            // D) DETERMINAR LA FECHA A MOSTRAR (La más antigua/próxima a vencer)
+            // Buscar la fecha más antigua (la próxima a vencer)
             if (fechaFinal) {
-                // Si aún no tenemos fecha guardada, tomamos esta
-                if (!fechaVencimiento) {
-                    fechaVencimiento = fechaFinal;
-                } 
-                // Si esta fecha es MENOR (anterior) a la que ya teníamos, la actualizamos
-                // (Ej: Si teníamos 20-Oct y esta factura es del 15-Oct, mostramos 15-Oct)
-                else if (fechaFinal < fechaVencimiento) {
+                if (!fechaVencimiento || fechaFinal < fechaVencimiento) {
                     fechaVencimiento = fechaFinal;
                 }
             }
         });
 
-        // --- PASO 4: RESPONDER ---
+        // --- D. RESPONDER ---
         const contratos = contratosData.data || [];
         const contratoActivo = contratos.find(c => c.state === 'enabled') || contratos[0] || {};
         
@@ -109,7 +93,7 @@ export default async function handler(req, res) {
             plan: contratoActivo.plan_name || cliente.plan_name || 'Plan Básico',
             ip: contratoActivo.ip || '---',
             deuda: deudaTotal,
-            fechaVencimiento: fechaVencimiento, // Ahora devuelve la fecha calculada con tu lógica
+            fechaVencimiento: fechaVencimiento,
             encontrado: true
         });
 
