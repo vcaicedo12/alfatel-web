@@ -1,175 +1,107 @@
-// === API WISPRO (BÚSQUEDA DIRECTA INTELIGENTE) ===
-const API_TOKEN = '8765771f-94f6-4c43-8f97-676bb17d3810'; 
+// src/js/api.js
+// Lógica del Frontend segura: Llama al Backend de Vercel en lugar de a Wispro directo.
 
-// Referencia al input del HTML
-const searchInput = document.getElementById('cedula') || document.getElementById('search-input');
-
+// 1. FUNCIÓN PRINCIPAL DE BÚSQUEDA
 export async function handleClientSearch(e) {
     if(e) e.preventDefault();
     
+    // Detectar input (móvil o escritorio)
     const inputEl = document.getElementById('cedula') || document.getElementById('search-input');
     const query = inputEl ? inputEl.value.trim() : '';
     
     if (!query) return;
 
-    // Validación: Solo números
+    // Validación básica: Solo números
     if (!/^\d+$/.test(query)) {
         alert("Por favor ingresa solo números para la Cédula.");
         return;
     }
 
+    // Activar animación de carga
     uiLoading(true);
     
     try {
-        // ESTRATEGIA DE BÚSQUEDA EN CASCADA (Para encontrar sí o sí)
-        let clientes = [];
-
-        // 1. INTENTO A: Búsqueda Exacta por Cédula (La más rápida)
-        let url = `/api/v1/clients?national_identification_number_eq=${query}`;
-        let resp = await fetch(url, { headers: { 'Accept': 'application/json', 'Authorization': API_TOKEN } });
-        let json = await resp.json();
-        clientes = json.data || [];
-
-        // 2. INTENTO B: Búsqueda por RUC (Si falló la A)
-        // (A veces registran la cédula en el campo RUC)
-        if (clientes.length === 0) {
-            console.log("⚠️ No encontrado por Cédula, intentando por RUC...");
-            url = `/api/v1/clients?taxpayer_identification_number_eq=${query}`;
-            resp = await fetch(url, { headers: { 'Accept': 'application/json', 'Authorization': API_TOKEN } });
-            json = await resp.json();
-            clientes = json.data || [];
+        // === CONEXIÓN SEGURA AL BACKEND (VERCEL) ===
+        // Esto protege tu Token de Wispro. 
+        // El navegador llama a TU servidor, y tu servidor llama a Wispro.
+        const respuesta = await fetch(`/api/consulta?cedula=${query}`);
+        
+        // Manejo de errores HTTP
+        if (!respuesta.ok) {
+            if(respuesta.status === 404) {
+                 // Cliente no encontrado (404 real del backend)
+                 mostrarErrorNoRegistrado();
+                 return;
+            }
+            // Otros errores (500, 403, etc)
+            throw new Error('Error en la búsqueda');
         }
 
-        // 3. INTENTO C: Búsqueda "Contiene" (Si falló la B)
-        // (Para casos donde la cédula tiene espacios extra o guiones en el sistema: "0400... ")
-        if (clientes.length === 0) {
-            console.log("⚠️ No encontrado exacto, intentando búsqueda flexible...");
-            url = `/api/v1/clients?national_identification_number_cont=${query}`;
-            resp = await fetch(url, { headers: { 'Accept': 'application/json', 'Authorization': API_TOKEN } });
-            json = await resp.json();
-            clientes = json.data || [];
-        }
+        // Si todo sale bien, obtenemos los datos limpios
+        const datos = await respuesta.json();
 
-        if (clientes.length > 0) {
-            // ¡ENCONTRADO! Usamos el primero que apareció
-            analizarCliente(clientes[0]);
-        } else {
-            // REALMENTE NO EXISTE
-            mostrarErrorNoRegistrado();
-        }
+        // Renderizar en pantalla con los datos procesados
+        renderizarResultadosSimplificado(datos);
 
     } catch (err) { 
         console.error(err);
         mostrarError("Ocurrió un error al intentar conectar. Intente más tarde."); 
-    }
-}
-
-async function analizarCliente(cliente) {
-    uiLoading(true, "Consultando facturación...");
-
-    try {
-        console.log("✅ Cliente encontrado:", cliente.name);
-        
-        let deudaTotal = 0;
-        let infoContrato = { plan: "Plan Desconocido", estado: "Desconocido", ip: "---" };
-        let fechaVencimientoCritica = null; // La fecha más urgente
-
-        // 2. BUSCAR FACTURAS PENDIENTES
-        // IMPORTANTE: Ahora que tenemos el cliente real, usamos su cédula OFICIAL del sistema para buscar facturas.
-        // Si el cliente no tiene cédula en el campo oficial (porque lo encontramos por RUC), usamos la query original como fallback o su ID.
-        
-        let urlFacturas = "";
-        let usandoFiltroID = false;
-
-        if (cliente.national_identification_number) {
-             urlFacturas = `/api/v1/invoicing/invoices?client_national_identification_number_eq=${cliente.national_identification_number}&state_eq=pending`;
-        } else {
-             // Si lo encontramos por RUC y el campo cédula está vacío, buscamos facturas por ID de cliente (fallback seguro)
-             // OJO: Este filtro suele fallar en la API y traer todas las facturas, por eso activamos el "Guardia" abajo.
-             urlFacturas = `/api/v1/invoicing/invoices?client_id_eq=${cliente.id}&state_eq=pending`;
-             usandoFiltroID = true;
-        }
-
-        const respFact = await fetch(urlFacturas, { headers: { 'Accept': 'application/json', 'Authorization': API_TOKEN } });
-        
-        if(respFact.ok) {
-            const jsonFact = await respFact.json();
-            const facturas = jsonFact.data || [];
-            
-            // === GUARDIA DE SEGURIDAD (FILTRO MANUAL) ===
-            // Si la API nos mandó basura (facturas de otra gente), las borramos aquí.
-            const facturasReales = facturas.filter(f => {
-                // Si buscamos por cédula exacta, confiamos en la API.
-                if (!usandoFiltroID) return true;
-
-                // Si buscamos por ID (caso RUC), verificamos que el nombre coincida.
-                // Normalizamos (mayúsculas y espacios) para comparar bien.
-                const nombreFactura = (f.client_name || "").toUpperCase().trim();
-                const nombreCliente = (cliente.name || "").toUpperCase().trim();
-                
-                return nombreFactura === nombreCliente;
-            });
-
-            console.log(`📊 Facturas API: ${facturas.length} -> Reales: ${facturasReales.length}`);
-
-            facturasReales.forEach(f => {
-                deudaTotal += parseFloat(f.balance);
-                
-                // === LÓGICA DE FECHAS ===
-                let fechaFinal = f.first_due_date;
-                if (!fechaFinal) fechaFinal = f.second_due_date;
-                if (!fechaFinal && f.created_at) fechaFinal = f.created_at.split('T')[0];
-
-                if (fechaFinal) {
-                    if (!fechaVencimientoCritica || fechaFinal < fechaVencimientoCritica) {
-                        fechaVencimientoCritica = fechaFinal;
-                    }
-                }
-            });
-        }
-
-        // 3. BUSCAR CONTRATO
-        const urlCont = `/api/v1/contracts?client_id_eq=${cliente.id}`;
-        const respCont = await fetch(urlCont, { headers: { 'Accept': 'application/json', 'Authorization': API_TOKEN } });
-        
-        if(respCont.ok) {
-            const jsonCont = await respCont.json();
-            const contratos = jsonCont.data || [];
-            const activo = contratos.find(c => c.state === 'enabled') || contratos[0];
-
-            if(activo) {
-                infoContrato.ip = activo.ip || "No asignada";
-                infoContrato.estado = activo.state;
-                
-                if(activo.plan_name) {
-                    infoContrato.plan = activo.plan_name;
-                } else if(activo.plan_id) {
-                    try {
-                        const pResp = await fetch(`/api/v1/plans/${activo.plan_id}`, { headers: { 'Accept': 'application/json', 'Authorization': API_TOKEN } });
-                        if(pResp.ok) {
-                            const pData = await pResp.json();
-                            const p = pData.data || pData; 
-                            if(p.name) infoContrato.plan = p.name;
-                        }
-                    } catch(e) { console.warn("Error plan extra"); }
-                } else if(cliente.plan_name) {
-                    infoContrato.plan = cliente.plan_name;
-                }
-            }
-        }
-
-        renderizarResultados(cliente, deudaTotal, infoContrato, fechaVencimientoCritica);
-
-    } catch (e) {
-        console.error(e);
-        mostrarError("Error al cargar los datos del cliente.");
     } finally {
+        // Desactivar animación de carga siempre
         uiLoading(false);
     }
 }
 
-// === FUNCIONES VISUALES (UI) ===
+// 2. FUNCIÓN DE RENDERIZADO (Adapta los datos del Backend a tu HTML)
+function renderizarResultadosSimplificado(data) {
+    // Mostrar el área de resultados
+    const resultArea = document.getElementById('resultArea');
+    const successState = document.getElementById('successState');
+    if (resultArea) resultArea.classList.remove('hidden');
+    if (successState) successState.classList.remove('hidden');
 
+    // 1. Llenar Textos Básicos
+    document.getElementById('clientName').textContent = data.nombre;
+    document.getElementById('clientPlan').textContent = (data.plan || "Plan Desconocido").toUpperCase();
+    document.getElementById('clientBalance').textContent = `$${data.deuda.toFixed(2)}`;
+
+    // 2. Lógica de Estado (Visual)
+    const labelEstado = document.querySelector('#clientIP').previousElementSibling; // El label "Estado:" o "Fecha:"
+    const valEstado = document.getElementById('clientIP'); // El texto de estado
+    const badge = document.getElementById('clientStatus'); // La etiqueta de color (ACTIVO/CORTADO)
+
+    // Lógica de colores y textos según la deuda y estado
+    if (data.estado === 'disabled') {
+        // CASO 1: CORTADO
+        if(labelEstado) labelEstado.textContent = "Estado:";
+        valEstado.textContent = "Servicio Cortado";
+        valEstado.className = "font-bold text-gray-500 text-right";
+        
+        badge.textContent = "CORTADO";
+        badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700";
+
+    } else if (data.deuda > 0.10) {
+        // CASO 2: CON DEUDA (ACTIVO PERO DEBE)
+        if(labelEstado) labelEstado.textContent = "Fecha Límite:";
+        // Si el backend nos mandó fecha, la usamos, sino ponemos "Vencido"
+        valEstado.textContent = data.fechaVencimiento ? data.fechaVencimiento : "Vencido";
+        valEstado.className = "font-bold text-red-600 text-right";
+        
+        badge.textContent = "PAGO PENDIENTE";
+        badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700";
+
+    } else {
+        // CASO 3: AL DÍA (TODO PERFECTO)
+        if(labelEstado) labelEstado.textContent = "Estado:";
+        valEstado.textContent = "Al Día";
+        valEstado.className = "font-medium text-green-600 text-right";
+        
+        badge.textContent = "ACTIVO";
+        badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+    }
+}
+
+// 3. FUNCIONES DE UI (Loading y Errores) - Igual que antes
 function uiLoading(show, text = "Consultando...") {
     const btnText = document.getElementById('btnText');
     const btnLoader = document.getElementById('btnLoader');
@@ -194,91 +126,63 @@ function uiLoading(show, text = "Consultando...") {
 
 function mostrarError(msg) {
     uiLoading(false);
-    document.getElementById('resultArea').classList.remove('hidden');
+    const resultArea = document.getElementById('resultArea');
     const errorState = document.getElementById('errorState');
-    errorState.classList.remove('hidden');
     
-    const iconDiv = errorState.querySelector('div.w-12');
-    if(iconDiv) {
-        iconDiv.classList.remove('bg-orange-100', 'text-orange-500');
-        iconDiv.classList.add('bg-red-50', 'text-red-500');
-    }
-    
-    const title = errorState.querySelector('h4');
-    if(title) title.textContent = "Error";
-    
-    const p = errorState.querySelector('p.text-slate-600') || errorState.querySelector('p.text-slate-500');
-    if(p) {
-        p.textContent = msg;
-        const btnContainer = errorState.querySelector('button'); 
-        if(btnContainer && btnContainer.textContent.includes('Actualizar')) {
-            btnContainer.style.display = 'none'; 
+    if (resultArea) resultArea.classList.remove('hidden');
+    if (errorState) {
+        errorState.classList.remove('hidden');
+        
+        // Estilar como Error Crítico
+        const iconDiv = errorState.querySelector('div.w-14'); // Ajustado selector Tailwind
+        if(iconDiv) {
+            iconDiv.classList.remove('bg-orange-100', 'text-orange-500');
+            iconDiv.classList.add('bg-red-50', 'text-red-500');
         }
+        
+        const title = errorState.querySelector('h4');
+        if(title) title.textContent = "Error";
+        
+        const p = errorState.querySelector('p');
+        if(p) p.textContent = msg;
+
+        // Ocultar botón de whatsapp en errores técnicos genéricos
+        const btn = errorState.querySelector('button');
+        if(btn) btn.style.display = 'none';
     }
 }
 
 function mostrarErrorNoRegistrado() {
     uiLoading(false);
-    document.getElementById('resultArea').classList.remove('hidden');
+    const resultArea = document.getElementById('resultArea');
     const errorState = document.getElementById('errorState');
-    errorState.classList.remove('hidden');
 
-    const iconDiv = errorState.querySelector('div.w-12');
-    if(iconDiv) {
-        iconDiv.classList.remove('bg-red-50', 'text-red-500');
-        iconDiv.classList.add('bg-orange-100', 'text-orange-500');
-    }
+    if (resultArea) resultArea.classList.remove('hidden');
+    if (errorState) {
+        errorState.classList.remove('hidden');
 
-    const title = errorState.querySelector('h4');
-    if(title) title.textContent = "Cédula no registrada";
+        // Estilar como Advertencia (Naranja)
+        const iconDiv = errorState.querySelector('div.w-14');
+        if(iconDiv) {
+            iconDiv.classList.remove('bg-red-50', 'text-red-500');
+            iconDiv.classList.add('bg-orange-100', 'text-orange-500');
+        }
 
-    const p = errorState.querySelector('p.text-slate-600') || errorState.querySelector('p.text-slate-500');
-    if(p) {
-        p.innerHTML = `No encontramos esta cédula en el sistema. <br>Si eres cliente, por favor actualiza tus datos.`;
-    }
+        const title = errorState.querySelector('h4');
+        if(title) title.textContent = "Cédula no registrada";
 
-    let btn = errorState.querySelector('button');
-    if(btn) {
-        btn.style.display = 'flex';
-        btn.onclick = () => window.redirigirWhatsapp('Hola Alfatel, quiero actualizar mis datos (Cédula no registrada en web).');
-    }
-}
+        const p = errorState.querySelector('p');
+        if(p) p.innerHTML = `No encontramos esta cédula en el sistema. <br>Si eres cliente, por favor actualiza tus datos.`;
 
-function renderizarResultados(cliente, deuda, contrato, fechaVencimiento) {
-    uiLoading(false);
-    document.getElementById('resultArea').classList.remove('hidden');
-    document.getElementById('successState').classList.remove('hidden');
-
-    document.getElementById('clientName').textContent = cliente.name;
-    document.getElementById('clientPlan').textContent = contrato.plan.toUpperCase();
-    
-    const labelEstado = document.querySelector('#clientIP').previousElementSibling;
-    const valEstado = document.getElementById('clientIP');
-    
-    if(deuda > 0.10) {
-        labelEstado.textContent = "Fecha Límite:";
-        valEstado.textContent = fechaVencimiento || "Vencido";
-        valEstado.className = "font-bold text-red-600 text-right";
-    } else {
-        labelEstado.textContent = "Estado:";
-        valEstado.textContent = "Al Día";
-        valEstado.className = "font-medium text-green-600 text-right";
-    }
-
-    document.getElementById('clientBalance').textContent = `$${deuda.toFixed(2)}`;
-    
-    const badge = document.getElementById('clientStatus');
-    if(contrato.estado === 'disabled') {
-        badge.textContent = "CORTADO";
-        badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-gray-200 text-gray-700";
-    } else if (deuda > 0.10) {
-        badge.textContent = "DEUDA";
-        badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700";
-    } else {
-        badge.textContent = "ACTIVO";
-        badge.className = "text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700";
+        // Mostrar botón de Whatsapp para actualizar
+        let btn = errorState.querySelector('button');
+        if(btn) {
+            btn.style.display = 'flex';
+            // Asumiendo que redirigirWhatsapp está global en main.js o window
+            btn.onclick = () => window.redirigirWhatsapp ? window.redirigirWhatsapp('Actualizar Datos') : alert("Contacta a soporte.");
+        }
     }
 }
 
-// Exponer globalmente para el HTML
+// Exponer globalmente para el HTML (onsubmit="handleClientSearch(event)")
 window.handleClientSearch = handleClientSearch;
