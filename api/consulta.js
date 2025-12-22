@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-    // 1. Configuración CORS (Permite que tu frontend se conecte)
+    // 1. Configuración CORS (Igual que siempre)
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
@@ -24,12 +24,12 @@ export default async function handler(req, res) {
         // --- PASO 1: BUSCAR EL CLIENTE ---
         let clientes = [];
         
-        // Intento A: Por Cédula exacta
+        // Búsqueda principal
         let resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
         let json = await resp.json();
         clientes = json.data || [];
 
-        // Intento B: Por RUC (si no encontró por cédula)
+        // Búsqueda de respaldo (RUC)
         if (clientes.length === 0) {
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, { headers });
             json = await resp.json();
@@ -41,12 +41,12 @@ export default async function handler(req, res) {
         }
 
         const cliente = clientes[0];
-        const clienteId = cliente.id; // ID Único del cliente
+        const clienteId = cliente.id;
 
-        console.log(`✅ Cliente encontrado: ${cliente.name} (ID: ${clienteId})`);
+        console.log(`✅ Cliente: ${cliente.name} (ID: ${clienteId})`);
 
-        // --- PASO 2: BUSCAR FACTURAS (Y FILTRARLAS MANUALMENTE) ---
-        // Pedimos las facturas pendientes filtradas por ID
+        // --- PASO 2: BUSCAR FACTURAS ---
+        // Traemos todas las pendientes de este ID
         const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
         const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
@@ -58,32 +58,48 @@ export default async function handler(req, res) {
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // --- AQUÍ ESTÁ LA CORRECCIÓN CLAVE ---
+        // --- PASO 3: PROCESAR CON TU LÓGICA DE LABORATORIO ---
         let deudaTotal = 0;
-        let fechaVencimiento = null;
+        let fechaVencimiento = null; // Aquí guardaremos la fecha más antigua encontrada
         const facturasRaw = facturasData.data || [];
 
-        console.log(`🔎 Facturas recibidas de la API: ${facturasRaw.length}`);
-
         facturasRaw.forEach(f => {
-            // 🛡️ FILTRO DE SEGURIDAD ESTRICTO 🛡️
-            // Comparamos el ID de la factura con el ID del cliente.
-            // Usamos String() para asegurar que comparamos texto con texto.
+            // A) FILTRO DE SEGURIDAD (Para no mezclar clientes)
             if (String(f.client_id) !== String(clienteId)) {
-                console.warn(`⚠️ Factura ajena detectada e ignorada. Pertenece a ID: ${f.client_id}`);
-                return; // ¡SALTAR ESTA FACTURA!
+                return; // Ignoramos si el ID no coincide
             }
 
-            // Si el ID coincide, sumamos la deuda
+            // B) SUMAR DEUDA
             deudaTotal += parseFloat(f.balance || 0);
-            
-            const fecha = f.first_due_date || f.created_at;
-            if (!fechaVencimiento || fecha < fechaVencimiento) fechaVencimiento = fecha;
+
+            // C) TU LÓGICA DE FECHAS (Tal cual tu script)
+            let fechaFinal = f.first_due_date;
+
+            // Si no hay 1er vencimiento, usamos el 2do
+            if (!fechaFinal) {
+                fechaFinal = f.second_due_date;
+            }
+
+            // Si tampoco hay 2do, usamos fecha de creación (solo la parte YYYY-MM-DD)
+            if (!fechaFinal && f.created_at) {
+                fechaFinal = f.created_at.split('T')[0];
+            }
+
+            // D) DETERMINAR LA FECHA A MOSTRAR (La más antigua/próxima a vencer)
+            if (fechaFinal) {
+                // Si aún no tenemos fecha guardada, tomamos esta
+                if (!fechaVencimiento) {
+                    fechaVencimiento = fechaFinal;
+                } 
+                // Si esta fecha es MENOR (anterior) a la que ya teníamos, la actualizamos
+                // (Ej: Si teníamos 20-Oct y esta factura es del 15-Oct, mostramos 15-Oct)
+                else if (fechaFinal < fechaVencimiento) {
+                    fechaVencimiento = fechaFinal;
+                }
+            }
         });
 
-        console.log(`💰 Deuda Real Calculada: $${deudaTotal}`);
-
-        // --- PASO 3: RESPONDER AL FRONTEND ---
+        // --- PASO 4: RESPONDER ---
         const contratos = contratosData.data || [];
         const contratoActivo = contratos.find(c => c.state === 'enabled') || contratos[0] || {};
         
@@ -92,13 +108,13 @@ export default async function handler(req, res) {
             estado: contratoActivo.state || 'desconocido',
             plan: contratoActivo.plan_name || cliente.plan_name || 'Plan Básico',
             ip: contratoActivo.ip || '---',
-            deuda: deudaTotal, // Deuda ya filtrada y correcta
-            fechaVencimiento: fechaVencimiento,
+            deuda: deudaTotal,
+            fechaVencimiento: fechaVencimiento, // Ahora devuelve la fecha calculada con tu lógica
             encontrado: true
         });
 
     } catch (error) {
-        console.error("Error crítico en API:", error);
+        console.error("Error API:", error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 }
