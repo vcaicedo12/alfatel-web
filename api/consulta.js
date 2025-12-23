@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
     if (!cedula) return res.status(400).json({ error: 'Cédula requerida' });
 
-    // A. LIMPIEZA TOTAL: Quitamos espacios
+    // A. LIMPIEZA: Quitamos espacios en blanco
     cedula = cedula.toString().replace(/\s+/g, '');
 
     try {
@@ -24,17 +24,17 @@ export default async function handler(req, res) {
         };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
-        // --- PASO 1: ENCONTRAR AL CLIENTE (Sea Cédula o RUC) ---
+        // --- PASO 1: ENCONTRAR AL CLIENTE (EL SABUESO) ---
+        // Buscamos la identidad de la persona, no importa cómo esté registrada.
         let clientes = [];
         let resp, json;
 
-        // Intento 1: Búsqueda exacta (Cédula normal)
+        // Intento 1: Por Cédula exacta
         resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
         json = await resp.json();
         clientes = json.data || [];
 
-        // Intento 2: Si no aparece, probamos agregando "001" (Lógica RUC)
-        // Esto soluciona el caso de la cédula que fallaba si está como RUC
+        // Intento 2: Si no aparece, probamos agregando "001" (Para RUCs)
         if (clientes.length === 0) {
             const rucPosible = cedula + '001';
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${rucPosible}`, { headers });
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
             clientes = json.data || [];
         }
 
-        // Intento 3: Búsqueda directa en campo RUC con el número original (Por si acaso)
+        // Intento 3: Búsqueda directa en campo RUC con el número original
         if (clientes.length === 0) {
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, { headers });
             json = await resp.json();
@@ -53,18 +53,16 @@ export default async function handler(req, res) {
             return res.status(404).json({ error: 'Cliente no encontrado' });
         }
 
+        // ¡TENEMOS AL CLIENTE!
         const cliente = clientes[0];
-        const clienteId = cliente.id; // ¡Este es el dato clave!
+        const clienteId = cliente.id; // Este es el UUID (Ej: d1e65f29...)
 
-        if (!clienteId) {
-             return res.status(500).json({ error: 'Error: Cliente sin ID en Wispro' });
-        }
+        console.log(`✅ Cliente encontrado: ${cliente.name} | UUID: ${clienteId}`);
 
-        // --- PASO 2: BUSCAR FACTURAS POR ID (LA FORMA SEGURA) ---
-        // Al usar 'client_id_eq', no importa si es RUC, Cédula o Pasaporte.
-        // Si el cliente existe, sus facturas aparecerán aquí.
-        const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${encodeURIComponent(clienteId)}&state_eq=pending`;
-        const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${encodeURIComponent(clienteId)}`;
+        // --- PASO 2: BUSCAR FACTURAS POR EL UUID (INFALIBLE) ---
+        // Aquí usamos 'client_id_eq'. Esto vincula la factura directo a la ficha del cliente.
+        const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
+        const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
         const [facturasResp, contratosResp] = await Promise.all([
             fetch(invoicesUrl, { headers }),
@@ -74,16 +72,20 @@ export default async function handler(req, res) {
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // --- PASO 3: PROCESAR DATOS ---
+        // --- PASO 3: CÁLCULO DE DEUDA ---
         let deudaTotal = 0;
         let fechaVencimiento = null;
         const facturasRaw = facturasData.data || [];
 
-        // Validamos que sea un array para evitar errores
+        console.log(`📊 Facturas encontradas para este UUID: ${facturasRaw.length}`);
+
         if (Array.isArray(facturasRaw)) {
             facturasRaw.forEach(f => {
-                // NOTA: Aquí confiamos en la API porque buscamos por ID específico.
-                // Ya no aplicamos filtros manuales que puedan borrar datos válidos.
+                // DOBLE VERIFICACIÓN DE SEGURIDAD
+                // Aunque buscamos por ID, verificamos que el ID de la factura coincida con el cliente.
+                if (f.client_id && String(f.client_id) !== String(clienteId)) {
+                    return; // Saltamos si hay algo raro
+                }
 
                 deudaTotal += parseFloat(f.balance || 0);
 
@@ -100,10 +102,19 @@ export default async function handler(req, res) {
             });
         }
 
-        // --- PASO 4: RESPONDER ---
+        // --- PASO 4: RESPUESTA ---
         const contratos = contratosData.data || [];
-        const contratoActivo = contratos.find(c => c.state === 'enabled') || contratos[0] || {};
+        // Lógica mejorada para contrato: Buscar el "enabled" (habilitado)
+        let contratoActivo = contratos.find(c => c.state === 'enabled');
         
+        // Si no hay ninguno habilitado, buscamos si hay uno "disabled" (cortado)
+        if (!contratoActivo) {
+            contratoActivo = contratos.find(c => c.state === 'disabled');
+        }
+        
+        // Si no hay ninguno, devolvemos objeto vacío
+        contratoActivo = contratoActivo || {};
+
         res.status(200).json({
             nombre: cliente.name,
             estado: contratoActivo.state || 'desconocido',
@@ -115,7 +126,7 @@ export default async function handler(req, res) {
         });
 
     } catch (error) {
-        console.error("Error API:", error);
+        console.error("Error crítico API:", error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 }
