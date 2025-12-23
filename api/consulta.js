@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
     if (!cedula) return res.status(400).json({ error: 'Cédula requerida' });
 
-    // A. LIMPIEZA: Quitamos espacios en blanco
+    // A. LIMPIEZA DE ESPACIOS
     cedula = cedula.toString().replace(/\s+/g, '');
 
     try {
@@ -24,17 +24,16 @@ export default async function handler(req, res) {
         };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
-        // --- PASO 1: ENCONTRAR AL CLIENTE (EL SABUESO) ---
-        // Buscamos la identidad de la persona, no importa cómo esté registrada.
+        // --- PASO 1: ENCONTRAR AL CLIENTE (SABUESO UUID) ---
         let clientes = [];
         let resp, json;
 
-        // Intento 1: Por Cédula exacta
+        // Intento 1: Cédula exacta
         resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
         json = await resp.json();
         clientes = json.data || [];
 
-        // Intento 2: Si no aparece, probamos agregando "001" (Para RUCs)
+        // Intento 2: RUC (agregando 001)
         if (clientes.length === 0) {
             const rucPosible = cedula + '001';
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${rucPosible}`, { headers });
@@ -42,7 +41,7 @@ export default async function handler(req, res) {
             clientes = json.data || [];
         }
 
-        // Intento 3: Búsqueda directa en campo RUC con el número original
+        // Intento 3: RUC directo
         if (clientes.length === 0) {
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, { headers });
             json = await resp.json();
@@ -53,14 +52,12 @@ export default async function handler(req, res) {
             return res.status(404).json({ error: 'Cliente no encontrado' });
         }
 
-        // ¡TENEMOS AL CLIENTE!
         const cliente = clientes[0];
-        const clienteId = cliente.id; // Este es el UUID (Ej: d1e65f29...)
+        const clienteId = cliente.id; // UUID Maestro
 
-        console.log(`✅ Cliente encontrado: ${cliente.name} | UUID: ${clienteId}`);
+        console.log(`✅ Cliente: ${cliente.name} | UUID: ${clienteId}`);
 
-        // --- PASO 2: BUSCAR FACTURAS POR EL UUID (INFALIBLE) ---
-        // Aquí usamos 'client_id_eq'. Esto vincula la factura directo a la ficha del cliente.
+        // --- PASO 2: BUSCAR FACTURAS PENDIENTES ---
         const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
         const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
@@ -72,26 +69,37 @@ export default async function handler(req, res) {
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // --- PASO 3: CÁLCULO DE DEUDA ---
+        // --- PASO 3: FILTRADO INTELIGENTE (LA SOLUCIÓN A LOS $456) ---
         let deudaTotal = 0;
         let fechaVencimiento = null;
         const facturasRaw = facturasData.data || [];
 
-        console.log(`📊 Facturas encontradas para este UUID: ${facturasRaw.length}`);
+        // CONFIGURACIÓN: Ignorar facturas de hace más de 6 meses
+        // Esto elimina automáticamente las facturas "zombis" del 2021
+        const FECHA_LIMITE = new Date();
+        FECHA_LIMITE.setMonth(FECHA_LIMITE.getMonth() - 6);
+
+        console.log(`📊 Total Facturas en Wispro (Sucias): ${facturasRaw.length}`);
 
         if (Array.isArray(facturasRaw)) {
             facturasRaw.forEach(f => {
-                // DOBLE VERIFICACIÓN DE SEGURIDAD
-                // Aunque buscamos por ID, verificamos que el ID de la factura coincida con el cliente.
-                if (f.client_id && String(f.client_id) !== String(clienteId)) {
-                    return; // Saltamos si hay algo raro
+                // Validación 1: Que la factura sea de este cliente (por seguridad)
+                if (f.client_id && String(f.client_id) !== String(clienteId)) return;
+
+                // Validación 2: FILTRO DE FECHA (Aquí ocurre la magia)
+                const fechaFactura = new Date(f.first_due_date || f.created_at);
+                
+                // Si la factura es más vieja que 6 meses, la saltamos
+                if (fechaFactura < FECHA_LIMITE) {
+                    console.log(`🗑️ Ignorando factura vieja del ${fechaFactura.toISOString().split('T')[0]} (Posible error administrativo)`);
+                    return; 
                 }
 
+                // Si es reciente (menos de 6 meses), la sumamos
                 deudaTotal += parseFloat(f.balance || 0);
 
-                // Lógica de fechas (Tu laboratorio)
-                let fechaFinal = f.first_due_date;
-                if (!fechaFinal) fechaFinal = f.second_due_date;
+                // Calculamos fecha de vencimiento para mostrar
+                let fechaFinal = f.first_due_date || f.second_due_date;
                 if (!fechaFinal && f.created_at) fechaFinal = f.created_at.split('T')[0];
 
                 if (fechaFinal) {
@@ -102,17 +110,12 @@ export default async function handler(req, res) {
             });
         }
 
+        console.log(`💰 Deuda Real (Limpia): $${deudaTotal}`);
+
         // --- PASO 4: RESPUESTA ---
         const contratos = contratosData.data || [];
-        // Lógica mejorada para contrato: Buscar el "enabled" (habilitado)
         let contratoActivo = contratos.find(c => c.state === 'enabled');
-        
-        // Si no hay ninguno habilitado, buscamos si hay uno "disabled" (cortado)
-        if (!contratoActivo) {
-            contratoActivo = contratos.find(c => c.state === 'disabled');
-        }
-        
-        // Si no hay ninguno, devolvemos objeto vacío
+        if (!contratoActivo) contratoActivo = contratos.find(c => c.state === 'disabled'); // Si está cortado, tomamos ese
         contratoActivo = contratoActivo || {};
 
         res.status(200).json({
@@ -126,7 +129,7 @@ export default async function handler(req, res) {
         });
 
     } catch (error) {
-        console.error("Error crítico API:", error);
+        console.error("Error API:", error);
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 }
