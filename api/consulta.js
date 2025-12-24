@@ -48,9 +48,10 @@ export default async function handler(req, res) {
         const cliente = clientes[0];
         const clienteId = cliente.id;
 
-        // --- PASO 2: BUSCAR FACTURAS PENDIENTES ---
-        // Aquí aplicamos tu lógica: state_eq=pending nos trae SOLO lo que no está pagado.
-        const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
+        // --- PASO 2: BUSCAR TODAS LAS FACTURAS (NO SOLO PENDING) ---
+        // CAMBIO CRÍTICO: Removemos el filtro state_eq=pending
+        // Traemos TODAS las facturas y filtramos por balance > 0
+        const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}`;
         const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
         const [facturasResp, contratosResp] = await Promise.all([
@@ -61,39 +62,65 @@ export default async function handler(req, res) {
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // --- PASO 3: SUMA INTELIGENTE ---
+        // --- PASO 3: SUMA INTELIGENTE CON BALANCE ---
         let deudaTotal = 0;
         let fechaVencimiento = null;
         const facturasRaw = facturasData.data || [];
+        let facturasProcesadas = 0;
+        let facturasConDeuda = 0;
 
-        console.log(`🧾 Facturas pendientes encontradas: ${facturasRaw.length}`);
+        console.log(`🧾 Total de facturas encontradas: ${facturasRaw.length}`);
 
         facturasRaw.forEach(f => {
-            // A) Verificar fecha para evitar el error de $456 del 2021
-            // Usamos created_at porque siempre existe. first_due_date a veces viene vacío.
-            const fechaStr = f.created_at; 
-            const anioFactura = new Date(fechaStr).getFullYear();
+            // CAMBIO: Convertir balance a número de forma segura
+            const balance = parseFloat(f.balance || 0);
+            
+            // FILTRO PRINCIPAL: Solo procesamos facturas con saldo pendiente
+            if (balance <= 0) {
+                return; // Saltar facturas pagadas o sin deuda
+            }
 
-            // REGLA DE SEGURIDAD:
-            // Si la factura es del 2021 o anterior, la consideramos "Basura" y la saltamos.
-            // Aceptamos 2022, 2023, 2024, 2025...
-            if (anioFactura <= 2021) {
-                console.log(`🗑️ Ignorando factura antigua del año ${anioFactura} (Monto: ${f.balance})`);
+            // Verificar que no esté anulada
+            if (f.state === 'void') {
+                console.log(`🗑️ Ignorando factura anulada: ${f.invoice_number}`);
                 return;
             }
 
-            // B) Sumar el saldo (balance)
-            // Wispro a veces devuelve strings, aseguramos que sea número
-            deudaTotal += parseFloat(f.balance || 0);
+            // OPCIONAL: Filtro de año (pero menos agresivo)
+            // Solo ignoramos facturas muy antiguas (más de 5 años)
+            const fechaStr = f.created_at || f.issued_at;
+            if (fechaStr) {
+                const anioFactura = new Date(fechaStr).getFullYear();
+                const anioActual = new Date().getFullYear();
+                
+                // Si la factura tiene más de 5 años, podría ser un error
+                if (anioActual - anioFactura > 5) {
+                    console.log(`⚠️ Factura muy antigua (${anioFactura}): ${f.invoice_number} - Balance: $${balance}`);
+                    // Decidir si incluirla o no según tu política
+                    // return; // Descomentar para ignorarlas
+                }
+            }
 
-            // C) Calcular fecha de vencimiento más antigua
-            let fechaFinal = f.first_due_date || f.created_at.split('T')[0];
+            // Sumar el saldo
+            deudaTotal += balance;
+            facturasConDeuda++;
+            
+            console.log(`💰 Factura #${f.invoice_number}: Balance $${balance} | Estado: ${f.state}`);
+
+            // Calcular fecha de vencimiento más antigua
+            let fechaFinal = f.first_due_date || (f.issued_at ? f.issued_at.split('T')[0] : null);
             if (fechaFinal) {
                 if (!fechaVencimiento || fechaFinal < fechaVencimiento) {
                     fechaVencimiento = fechaFinal;
                 }
             }
+            
+            facturasProcesadas++;
         });
+
+        console.log(`✅ Facturas procesadas: ${facturasProcesadas}`);
+        console.log(`💵 Facturas con deuda: ${facturasConDeuda}`);
+        console.log(`💰 Deuda total calculada: $${deudaTotal}`);
 
         // --- PASO 4: RESPUESTA ---
         const contratos = contratosData.data || [];
@@ -106,13 +133,22 @@ export default async function handler(req, res) {
             estado: contratoActivo.state || 'desconocido',
             plan: contratoActivo.plan_name || cliente.plan_name || 'Plan Básico',
             ip: contratoActivo.ip || '---',
-            deuda: deudaTotal, // Deuda filtrada
+            deuda: parseFloat(deudaTotal.toFixed(2)), // Redondear a 2 decimales
             fechaVencimiento: fechaVencimiento,
-            encontrado: true
+            encontrado: true,
+            // Debug info (puedes comentar en producción)
+            debug: {
+                totalFacturas: facturasRaw.length,
+                facturasConDeuda: facturasConDeuda,
+                clienteId: clienteId
+            }
         });
 
     } catch (error) {
-        console.error("Error API:", error);
-        res.status(500).json({ error: 'Error interno del servidor' });
+        console.error("❌ Error API:", error);
+        res.status(500).json({ 
+            error: 'Error interno del servidor',
+            detalle: error.message 
+        });
     }
 }
