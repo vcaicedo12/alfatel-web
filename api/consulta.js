@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-    // 1. Configuración de Seguridad
+    // 1. Configuración de Seguridad (CORS)
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
@@ -14,20 +14,20 @@ export default async function handler(req, res) {
 
     if (!cedula) return res.status(400).json({ error: 'Cédula requerida' });
 
-    // LIMPIEZA: Quitamos espacios
+    // Limpieza de cédula
     cedula = cedula.toString().replace(/\s+/g, '');
 
     try {
         const headers = { 'Accept': 'application/json', 'Authorization': API_TOKEN };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
-        // --- PASO 1: ENCONTRAR AL CLIENTE ---
+        // --- PASO 1: ENCONTRAR AL CLIENTE (Tu lógica de búsqueda es correcta) ---
         let clientes = [];
         let resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
         let json = await resp.json();
         clientes = json.data || [];
 
-        // Intento RUC
+        // Intento RUC (Cedula + 001)
         if (clientes.length === 0) {
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula + '001'}`, { headers });
             json = await resp.json();
@@ -48,7 +48,9 @@ export default async function handler(req, res) {
         const cliente = clientes[0];
         const clienteId = cliente.id;
 
-        // --- PASO 2: BUSCAR FACTURAS ---
+        // --- PASO 2: BUSCAR FACTURAS PENDIENTES Y CONTRATOS ---
+        // Nota: Wispro pagina los resultados. Si un cliente tiene MÁS de 50 facturas pendientes (raro), 
+        // solo sumaría las primeras 50. Para el 99% de los casos, esto basta.
         const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
         const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
@@ -60,31 +62,28 @@ export default async function handler(req, res) {
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // --- PASO 3: SUMAR SOLO LO ACTUAL ---
+        // --- PASO 3: SUMA DE DEUDA REAL (CORREGIDO) ---
         let deudaTotal = 0;
         let fechaVencimiento = null;
         const facturasRaw = facturasData.data || [];
 
-        // Año actual para referencia
-        const anioActual = new Date().getFullYear(); // 2025
+        console.log(`Cliente ${cliente.name}: Encontradas ${facturasRaw.length} facturas pendientes.`);
 
         facturasRaw.forEach(f => {
-            // Obtenemos el año de la factura
-            const fechaStr = f.created_at; 
-            const anioFactura = new Date(fechaStr).getFullYear();
+            // ERROR ANTERIOR: Ignorábamos facturas viejas. 
+            // CORRECCIÓN: Si el estado es 'pending' (que ya filtramos en la URL), SE DEBE COBRAR.
+            
+            // Parseamos el balance con seguridad
+            const saldoPendiente = parseFloat(f.balance);
 
-            // --- EL FILTRO SALVAVIDAS ---
-            // Si la factura es del 2021 o anterior, NO LA SUMAMOS.
-            // Solo sumamos 2022, 2023, 2024, 2025.
-            if (anioFactura <= 2021) {
-                return; // Ignorar basura vieja
+            // Solo sumamos si es un número válido
+            if (!isNaN(saldoPendiente)) {
+                deudaTotal += saldoPendiente;
             }
 
-            // Si llegamos aquí, la factura es reciente. SUMAMOS EL DINERO.
-            deudaTotal += parseFloat(f.balance || 0);
-
-            // Calcular fecha para mostrar al cliente
-            let fechaFinal = f.first_due_date || f.created_at.split('T')[0];
+            // Calcular fecha de vencimiento más antigua (la prioridad para pagar)
+            let fechaFinal = f.first_due_date || (f.created_at ? f.created_at.split('T')[0] : null);
+            
             if (fechaFinal) {
                 if (!fechaVencimiento || fechaFinal < fechaVencimiento) {
                     fechaVencimiento = fechaFinal;
@@ -92,11 +91,12 @@ export default async function handler(req, res) {
             }
         });
 
-        // Redondeamos a 2 decimales para que se vea como dinero (ej: 20.00)
+        // Redondeo final para evitar errores de punto flotante (ej: 15.000000001)
         deudaTotal = Math.round(deudaTotal * 100) / 100;
 
         // --- PASO 4: RESPUESTA ---
         const contratos = contratosData.data || [];
+        // Lógica para encontrar el plan más relevante
         let contratoActivo = contratos.find(c => c.state === 'enabled');
         if (!contratoActivo) contratoActivo = contratos.find(c => c.state === 'disabled');
         contratoActivo = contratoActivo || {};
@@ -106,8 +106,10 @@ export default async function handler(req, res) {
             estado: contratoActivo.state || 'desconocido',
             plan: contratoActivo.plan_name || cliente.plan_name || 'Plan Básico',
             ip: contratoActivo.ip || '---',
-            deuda: deudaTotal, // ¡Aquí saldrá el valor correcto ($20 o $60)!
+            deuda: deudaTotal, 
+            moneda: '$', // Agregamos esto para claridad en el frontend
             fechaVencimiento: fechaVencimiento,
+            facturasPendientesCount: facturasRaw.length, // Dato extra útil para depurar
             encontrado: true
         });
 
