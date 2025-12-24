@@ -14,33 +14,27 @@ export default async function handler(req, res) {
 
     if (!cedula) return res.status(400).json({ error: 'Cédula requerida' });
 
-    // A. LIMPIEZA DE ESPACIOS (Fundamental para que funcione la búsqueda)
+    // LIMPIEZA: Quitamos espacios
     cedula = cedula.toString().replace(/\s+/g, '');
 
     try {
-        const headers = { 
-            'Accept': 'application/json', 
-            'Authorization': API_TOKEN 
-        };
+        const headers = { 'Accept': 'application/json', 'Authorization': API_TOKEN };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
-        // --- PASO 1: ENCONTRAR AL CLIENTE (SABUESO) ---
+        // --- PASO 1: ENCONTRAR AL CLIENTE ---
         let clientes = [];
-        let resp, json;
-
-        // Búsqueda 1: Cédula exacta
-        resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
-        json = await resp.json();
+        let resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
+        let json = await resp.json();
         clientes = json.data || [];
 
-        // Búsqueda 2: RUC (agregando 001)
+        // Si falla, intentamos agregando 001 (RUC)
         if (clientes.length === 0) {
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula + '001'}`, { headers });
             json = await resp.json();
             clientes = json.data || [];
         }
 
-        // Búsqueda 3: RUC directo
+        // Si falla, intentamos RUC directo
         if (clientes.length === 0) {
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, { headers });
             json = await resp.json();
@@ -52,10 +46,10 @@ export default async function handler(req, res) {
         }
 
         const cliente = clientes[0];
-        const clienteId = cliente.id; // UUID Maestro
+        const clienteId = cliente.id;
 
-        // --- PASO 2: BUSCAR FACTURAS ---
-        // Confiamos en la API: Si pedimos facturas de este ID, son de este cliente.
+        // --- PASO 2: BUSCAR FACTURAS PENDIENTES ---
+        // Aquí aplicamos tu lógica: state_eq=pending nos trae SOLO lo que no está pagado.
         const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
         const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
@@ -67,35 +61,33 @@ export default async function handler(req, res) {
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // --- PASO 3: FILTRADO POR AÑO (Simple y Robusto) ---
+        // --- PASO 3: SUMA INTELIGENTE ---
         let deudaTotal = 0;
         let fechaVencimiento = null;
         const facturasRaw = facturasData.data || [];
-        
-        // Obtenemos el año actual para referencia (ej: 2025)
-        const anioActual = new Date().getFullYear();
+
+        console.log(`🧾 Facturas pendientes encontradas: ${facturasRaw.length}`);
 
         facturasRaw.forEach(f => {
-            // Obtenemos la fecha de la factura. Si falla, usamos la fecha de hoy por seguridad.
-            const fechaStr = f.first_due_date || f.created_at || new Date().toISOString();
-            const fechaFactura = new Date(fechaStr);
-            const anioFactura = fechaFactura.getFullYear();
+            // A) Verificar fecha para evitar el error de $456 del 2021
+            // Usamos created_at porque siempre existe. first_due_date a veces viene vacío.
+            const fechaStr = f.created_at; 
+            const anioFactura = new Date(fechaStr).getFullYear();
 
-            // --- REGLA DE ORO ---
-            // Solo aceptamos facturas del año actual (2025) y del año anterior (2024).
-            // Todo lo que sea 2023, 2022, 2021... se ignora.
-            if (anioFactura < (anioActual - 1)) {
-                // Es muy vieja (Zombie), la saltamos.
+            // REGLA DE SEGURIDAD:
+            // Si la factura es del 2021 o anterior, la consideramos "Basura" y la saltamos.
+            // Aceptamos 2022, 2023, 2024, 2025...
+            if (anioFactura <= 2021) {
+                console.log(`🗑️ Ignorando factura antigua del año ${anioFactura} (Monto: ${f.balance})`);
                 return;
             }
 
-            // Si pasa el filtro, sumamos
+            // B) Sumar el saldo (balance)
+            // Wispro a veces devuelve strings, aseguramos que sea número
             deudaTotal += parseFloat(f.balance || 0);
 
-            // Calcular fecha a mostrar
-            let fechaFinal = f.first_due_date || f.second_due_date;
-            if (!fechaFinal && f.created_at) fechaFinal = f.created_at.split('T')[0];
-
+            // C) Calcular fecha de vencimiento más antigua
+            let fechaFinal = f.first_due_date || f.created_at.split('T')[0];
             if (fechaFinal) {
                 if (!fechaVencimiento || fechaFinal < fechaVencimiento) {
                     fechaVencimiento = fechaFinal;
@@ -114,7 +106,7 @@ export default async function handler(req, res) {
             estado: contratoActivo.state || 'desconocido',
             plan: contratoActivo.plan_name || cliente.plan_name || 'Plan Básico',
             ip: contratoActivo.ip || '---',
-            deuda: deudaTotal,
+            deuda: deudaTotal, // Deuda filtrada
             fechaVencimiento: fechaVencimiento,
             encontrado: true
         });
