@@ -14,126 +14,105 @@ export default async function handler(req, res) {
 
     if (!cedula) return res.status(400).json({ error: 'Cédula requerida' });
 
-    // LIMPIEZA AGRESIVA: Solo números
-    cedula = cedula.toString().replace(/\D/g, '');
+    // LIMPIEZA: Quitamos espacios
+    cedula = cedula.toString().replace(/\s+/g, '');
 
     try {
         const headers = { 'Accept': 'application/json', 'Authorization': API_TOKEN };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
         // --- PASO 1: ENCONTRAR AL CLIENTE ---
-        let cliente = null;
-        let intentos = [
-            { url: `${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, tipo: 'Cédula exacta' },
-            { url: `${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}001`, tipo: 'RUC con 001' },
-            { url: `${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, tipo: 'RUC directo' },
-            { url: `${baseUrl}/api/v1/clients?national_identification_number_cont=${cedula}`, tipo: 'Búsqueda parcial' },
-        ];
+        let clientes = [];
+        let resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
+        let json = await resp.json();
+        clientes = json.data || [];
 
-        for (let intento of intentos) {
-            const resp = await fetch(intento.url, { headers });
-            const json = await resp.json();
-            
-            if (json.data && json.data.length > 0) {
-                cliente = json.data[0];
-                console.log(`✅ Cliente encontrado con: ${intento.tipo}`);
-                break;
-            }
+        // Intento RUC
+        if (clientes.length === 0) {
+            resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula + '001'}`, { headers });
+            json = await resp.json();
+            clientes = json.data || [];
         }
 
-        if (!cliente) {
-            return res.status(404).json({ error: 'Cliente no encontrado con cédula: ' + cedula });
+        // Intento RUC directo
+        if (clientes.length === 0) {
+            resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, { headers });
+            json = await resp.json();
+            clientes = json.data || [];
         }
 
+        if (clientes.length === 0) {
+            return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+
+        const cliente = clientes[0];
         const clienteId = cliente.id;
-        console.log(`👤 Cliente: ${cliente.name} | ID: ${clienteId}`);
 
-        // --- PASO 2: OBTENER DETALLES COMPLETOS DEL CLIENTE (INCLUYE BALANCE) ---
-        // Este endpoint trae el balance C/C calculado por Wispro
-        const clienteDetalleResp = await fetch(`${baseUrl}/api/v1/clients/${clienteId}`, { headers });
-        const clienteDetalle = await clienteDetalleResp.json();
-
-        // --- PASO 3: EXTRAER BALANCE REAL ---
-        // Wispro calcula automáticamente: balance = credito - facturas_impagas
-        let deudaReal = 0;
-        let creditoDisponible = 0;
-        let facturasImpagas = 0;
-
-        // El balance puede venir en diferentes campos según la configuración de Wispro
-        if (clienteDetalle.balance !== undefined && clienteDetalle.balance !== null) {
-            deudaReal = parseFloat(clienteDetalle.balance);
-        } else if (clienteDetalle.current_account_balance !== undefined) {
-            deudaReal = parseFloat(clienteDetalle.current_account_balance);
-        }
-
-        // Información adicional del balance
-        if (clienteDetalle.credit !== undefined) {
-            creditoDisponible = parseFloat(clienteDetalle.credit || 0);
-        }
-        if (clienteDetalle.unpaid_invoices !== undefined) {
-            facturasImpagas = parseFloat(clienteDetalle.unpaid_invoices || 0);
-        }
-
-        // Si el balance es negativo, el cliente DEBE ese monto
-        // Si es positivo, tiene crédito a favor
-        const deuda = deudaReal < 0 ? Math.abs(deudaReal) : 0;
-
-        console.log(`💰 Balance C/C: ${deudaReal}`);
-        console.log(`💳 Crédito disponible: ${creditoDisponible}`);
-        console.log(`📄 Facturas impagas: ${facturasImpagas}`);
-        console.log(`🔴 DEUDA REAL: ${deuda}`);
-
-        // --- PASO 4: OBTENER INFO DE CONTRATOS ---
+        // --- PASO 2: BUSCAR FACTURAS ---
+        const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
         const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
-        const contratosResp = await fetch(contractsUrl, { headers });
+
+        const [facturasResp, contratosResp] = await Promise.all([
+            fetch(invoicesUrl, { headers }),
+            fetch(contractsUrl, { headers })
+        ]);
+
+        const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
+        // --- PASO 3: SUMAR SOLO LO ACTUAL ---
+        let deudaTotal = 0;
+        let fechaVencimiento = null;
+        const facturasRaw = facturasData.data || [];
+
+        // Año actual para referencia
+        const anioActual = new Date().getFullYear(); // 2025
+
+        facturasRaw.forEach(f => {
+            // Obtenemos el año de la factura
+            const fechaStr = f.created_at; 
+            const anioFactura = new Date(fechaStr).getFullYear();
+
+            // --- EL FILTRO SALVAVIDAS ---
+            // Si la factura es del 2021 o anterior, NO LA SUMAMOS.
+            // Solo sumamos 2022, 2023, 2024, 2025.
+            if (anioFactura <= 2021) {
+                return; // Ignorar basura vieja
+            }
+
+            // Si llegamos aquí, la factura es reciente. SUMAMOS EL DINERO.
+            deudaTotal += parseFloat(f.balance || 0);
+
+            // Calcular fecha para mostrar al cliente
+            let fechaFinal = f.first_due_date || f.created_at.split('T')[0];
+            if (fechaFinal) {
+                if (!fechaVencimiento || fechaFinal < fechaVencimiento) {
+                    fechaVencimiento = fechaFinal;
+                }
+            }
+        });
+
+        // Redondeamos a 2 decimales para que se vea como dinero (ej: 20.00)
+        deudaTotal = Math.round(deudaTotal * 100) / 100;
+
+        // --- PASO 4: RESPUESTA ---
         const contratos = contratosData.data || [];
         let contratoActivo = contratos.find(c => c.state === 'enabled');
         if (!contratoActivo) contratoActivo = contratos.find(c => c.state === 'disabled');
         contratoActivo = contratoActivo || {};
 
-        // --- PASO 5: BUSCAR FECHA DE VENCIMIENTO (OPCIONAL) ---
-        let fechaVencimiento = null;
-        if (deuda > 0) {
-            // Solo buscamos facturas pendientes si hay deuda
-            const facturasUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
-            const facturasResp = await fetch(facturasUrl, { headers });
-            const facturasData = await facturasResp.json();
-            const facturas = facturasData.data || [];
-
-            // Encontrar la fecha de vencimiento más antigua
-            facturas.forEach(f => {
-                const fecha = f.first_due_date || (f.issued_at ? f.issued_at.split('T')[0] : null);
-                if (fecha && (!fechaVencimiento || fecha < fechaVencimiento)) {
-                    fechaVencimiento = fecha;
-                }
-            });
-        }
-
-        // --- RESPUESTA FINAL ---
         res.status(200).json({
             nombre: cliente.name,
-            cedula: cliente.national_identification_number || cliente.taxpayer_identification_number,
             estado: contratoActivo.state || 'desconocido',
             plan: contratoActivo.plan_name || cliente.plan_name || 'Plan Básico',
             ip: contratoActivo.ip || '---',
-            deuda: deuda, // DEUDA REAL según Balance C/C
+            deuda: deudaTotal, // ¡Aquí saldrá el valor correcto ($20 o $60)!
             fechaVencimiento: fechaVencimiento,
-            encontrado: true,
-            // Info adicional del balance
-            balanceInfo: {
-                balanceCC: deudaReal,
-                creditoDisponible: creditoDisponible,
-                facturasImpagas: facturasImpagas
-            }
+            encontrado: true
         });
 
     } catch (error) {
-        console.error("❌ ERROR:", error);
-        res.status(500).json({ 
-            error: 'Error interno del servidor',
-            detalle: error.message
-        });
+        console.error("Error API:", error);
+        res.status(500).json({ error: 'Error interno del servidor' });
     }
 }
