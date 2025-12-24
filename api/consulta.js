@@ -14,43 +14,46 @@ export default async function handler(req, res) {
 
     if (!cedula) return res.status(400).json({ error: 'Cédula requerida' });
 
-    // LIMPIEZA: Quitamos espacios
-    cedula = cedula.toString().replace(/\s+/g, '');
+    // LIMPIEZA AGRESIVA: Quitamos TODOS los caracteres no numéricos
+    cedula = cedula.toString().replace(/\D/g, '');
 
     try {
         const headers = { 'Accept': 'application/json', 'Authorization': API_TOKEN };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
-        // --- PASO 1: ENCONTRAR AL CLIENTE ---
+        // --- PASO 1: ENCONTRAR AL CLIENTE (MÚLTIPLES INTENTOS) ---
         let clientes = [];
-        let resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
-        let json = await resp.json();
-        clientes = json.data || [];
+        let intentos = [
+            // Intento 1: Por cédula exacta
+            `${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`,
+            // Intento 2: Por RUC con 001
+            `${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}001`,
+            // Intento 3: Por RUC directo
+            `${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`,
+            // Intento 4: Búsqueda parcial por cédula (contains)
+            `${baseUrl}/api/v1/clients?national_identification_number_cont=${cedula}`,
+        ];
 
-        // Si falla, intentamos agregando 001 (RUC)
-        if (clientes.length === 0) {
-            resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula + '001'}`, { headers });
-            json = await resp.json();
-            clientes = json.data || [];
+        for (let url of intentos) {
+            const resp = await fetch(url, { headers });
+            const json = await resp.json();
+            if (json.data && json.data.length > 0) {
+                clientes = json.data;
+                console.log(`✅ Cliente encontrado con: ${url}`);
+                break;
+            }
         }
 
-        // Si falla, intentamos RUC directo
         if (clientes.length === 0) {
-            resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, { headers });
-            json = await resp.json();
-            clientes = json.data || [];
-        }
-
-        if (clientes.length === 0) {
-            return res.status(404).json({ error: 'Cliente no encontrado' });
+            return res.status(404).json({ error: 'Cliente no encontrado con cédula: ' + cedula });
         }
 
         const cliente = clientes[0];
         const clienteId = cliente.id;
 
-        // --- PASO 2: BUSCAR TODAS LAS FACTURAS (NO SOLO PENDING) ---
-        // CAMBIO CRÍTICO: Removemos el filtro state_eq=pending
-        // Traemos TODAS las facturas y filtramos por balance > 0
+        console.log(`👤 Cliente: ${cliente.name} | ID: ${clienteId}`);
+
+        // --- PASO 2: BUSCAR FACTURAS Y CONTRATOS ---
         const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}`;
         const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
@@ -59,96 +62,108 @@ export default async function handler(req, res) {
             fetch(contractsUrl, { headers })
         ]);
 
+        if (!facturasResp.ok) {
+            throw new Error(`Error al obtener facturas: ${facturasResp.status}`);
+        }
+
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // --- PASO 3: SUMA INTELIGENTE CON BALANCE ---
+        // --- PASO 3: CALCULAR DEUDA REAL ---
         let deudaTotal = 0;
         let fechaVencimiento = null;
         const facturasRaw = facturasData.data || [];
-        let facturasProcesadas = 0;
-        let facturasConDeuda = 0;
+        let facturasConDeuda = [];
 
-        console.log(`🧾 Total de facturas encontradas: ${facturasRaw.length}`);
+        console.log(`📊 Total de facturas encontradas: ${facturasRaw.length}`);
 
-        facturasRaw.forEach(f => {
-            // CAMBIO: Convertir balance a número de forma segura
-            const balance = parseFloat(f.balance || 0);
+        // Procesar TODAS las facturas
+        for (let i = 0; i < facturasRaw.length; i++) {
+            const f = facturasRaw[i];
             
-            // FILTRO PRINCIPAL: Solo procesamos facturas con saldo pendiente
-            if (balance <= 0) {
-                return; // Saltar facturas pagadas o sin deuda
+            // Convertir balance de forma segura
+            let balance = 0;
+            if (f.balance !== null && f.balance !== undefined && f.balance !== '') {
+                balance = parseFloat(String(f.balance).replace(/[^0-9.-]/g, ''));
             }
 
-            // Verificar que no esté anulada
+            // Log de CADA factura para debugging
+            console.log(`📄 Factura #${f.invoice_number || 'N/A'}: Balance=$${balance} | Estado=${f.state}`);
+
+            // Filtros de exclusión
             if (f.state === 'void') {
-                console.log(`🗑️ Ignorando factura anulada: ${f.invoice_number}`);
-                return;
+                console.log(`   ↳ ❌ Anulada - ignorada`);
+                continue;
             }
 
-            // OPCIONAL: Filtro de año (pero menos agresivo)
-            // Solo ignoramos facturas muy antiguas (más de 5 años)
-            const fechaStr = f.created_at || f.issued_at;
-            if (fechaStr) {
-                const anioFactura = new Date(fechaStr).getFullYear();
-                const anioActual = new Date().getFullYear();
-                
-                // Si la factura tiene más de 5 años, podría ser un error
-                if (anioActual - anioFactura > 5) {
-                    console.log(`⚠️ Factura muy antigua (${anioFactura}): ${f.invoice_number} - Balance: $${balance}`);
-                    // Decidir si incluirla o no según tu política
-                    // return; // Descomentar para ignorarlas
-                }
+            if (f.state === 'draft') {
+                console.log(`   ↳ ❌ Borrador - ignorada`);
+                continue;
             }
 
-            // Sumar el saldo
-            deudaTotal += balance;
-            facturasConDeuda++;
+            if (isNaN(balance) || balance <= 0) {
+                console.log(`   ↳ ✅ Sin deuda - ignorada`);
+                continue;
+            }
+
+            // Esta factura tiene deuda real
+            console.log(`   ↳ 💰 DEUDA DETECTADA: $${balance}`);
             
-            console.log(`💰 Factura #${f.invoice_number}: Balance $${balance} | Estado: ${f.state}`);
+            deudaTotal += balance;
+            facturasConDeuda.push({
+                numero: f.invoice_number,
+                balance: balance,
+                estado: f.state,
+                fecha: f.issued_at || f.created_at
+            });
 
             // Calcular fecha de vencimiento más antigua
-            let fechaFinal = f.first_due_date || (f.issued_at ? f.issued_at.split('T')[0] : null);
+            const fechaFinal = f.first_due_date || (f.issued_at ? f.issued_at.split('T')[0] : null);
             if (fechaFinal) {
                 if (!fechaVencimiento || fechaFinal < fechaVencimiento) {
                     fechaVencimiento = fechaFinal;
                 }
             }
-            
-            facturasProcesadas++;
-        });
+        }
 
-        console.log(`✅ Facturas procesadas: ${facturasProcesadas}`);
-        console.log(`💵 Facturas con deuda: ${facturasConDeuda}`);
-        console.log(`💰 Deuda total calculada: $${deudaTotal}`);
+        console.log(`\n💵 RESUMEN:`);
+        console.log(`   Total facturas: ${facturasRaw.length}`);
+        console.log(`   Facturas con deuda: ${facturasConDeuda.length}`);
+        console.log(`   💰 DEUDA TOTAL: $${deudaTotal.toFixed(2)}`);
 
-        // --- PASO 4: RESPUESTA ---
+        // --- PASO 4: OBTENER INFO DEL CONTRATO ---
         const contratos = contratosData.data || [];
         let contratoActivo = contratos.find(c => c.state === 'enabled');
         if (!contratoActivo) contratoActivo = contratos.find(c => c.state === 'disabled');
         contratoActivo = contratoActivo || {};
 
-        res.status(200).json({
+        // --- RESPUESTA FINAL ---
+        const respuesta = {
             nombre: cliente.name,
+            cedula: cliente.national_identification_number || cliente.taxpayer_identification_number,
             estado: contratoActivo.state || 'desconocido',
             plan: contratoActivo.plan_name || cliente.plan_name || 'Plan Básico',
             ip: contratoActivo.ip || '---',
-            deuda: parseFloat(deudaTotal.toFixed(2)), // Redondear a 2 decimales
+            deuda: parseFloat(deudaTotal.toFixed(2)),
             fechaVencimiento: fechaVencimiento,
             encontrado: true,
-            // Debug info (puedes comentar en producción)
-            debug: {
+            // Información detallada para debugging
+            detalleFacturas: facturasConDeuda,
+            resumen: {
                 totalFacturas: facturasRaw.length,
-                facturasConDeuda: facturasConDeuda,
+                facturasConDeuda: facturasConDeuda.length,
                 clienteId: clienteId
             }
-        });
+        };
+
+        res.status(200).json(respuesta);
 
     } catch (error) {
-        console.error("❌ Error API:", error);
+        console.error("❌ ERROR GENERAL:", error);
         res.status(500).json({ 
             error: 'Error interno del servidor',
-            detalle: error.message 
+            detalle: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         });
     }
 }
