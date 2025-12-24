@@ -14,7 +14,7 @@ export default async function handler(req, res) {
 
     if (!cedula) return res.status(400).json({ error: 'Cédula requerida' });
 
-    // A. LIMPIEZA DE ESPACIOS
+    // A. LIMPIEZA DE ESPACIOS (Fundamental para que funcione la búsqueda)
     cedula = cedula.toString().replace(/\s+/g, '');
 
     try {
@@ -24,24 +24,23 @@ export default async function handler(req, res) {
         };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
-        // --- PASO 1: ENCONTRAR AL CLIENTE (SABUESO UUID) ---
+        // --- PASO 1: ENCONTRAR AL CLIENTE (SABUESO) ---
         let clientes = [];
         let resp, json;
 
-        // Intento 1: Cédula exacta
+        // Búsqueda 1: Cédula exacta
         resp = await fetch(`${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, { headers });
         json = await resp.json();
         clientes = json.data || [];
 
-        // Intento 2: RUC (agregando 001)
+        // Búsqueda 2: RUC (agregando 001)
         if (clientes.length === 0) {
-            const rucPosible = cedula + '001';
-            resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${rucPosible}`, { headers });
+            resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula + '001'}`, { headers });
             json = await resp.json();
             clientes = json.data || [];
         }
 
-        // Intento 3: RUC directo
+        // Búsqueda 3: RUC directo
         if (clientes.length === 0) {
             resp = await fetch(`${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, { headers });
             json = await resp.json();
@@ -55,9 +54,8 @@ export default async function handler(req, res) {
         const cliente = clientes[0];
         const clienteId = cliente.id; // UUID Maestro
 
-        console.log(`✅ Cliente: ${cliente.name} | UUID: ${clienteId}`);
-
-        // --- PASO 2: BUSCAR FACTURAS PENDIENTES ---
+        // --- PASO 2: BUSCAR FACTURAS ---
+        // Confiamos en la API: Si pedimos facturas de este ID, son de este cliente.
         const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
         const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
 
@@ -69,53 +67,46 @@ export default async function handler(req, res) {
         const facturasData = await facturasResp.json();
         const contratosData = await contratosResp.json();
 
-        // --- PASO 3: FILTRADO INTELIGENTE (LA SOLUCIÓN A LOS $456) ---
+        // --- PASO 3: FILTRADO POR AÑO (Simple y Robusto) ---
         let deudaTotal = 0;
         let fechaVencimiento = null;
         const facturasRaw = facturasData.data || [];
+        
+        // Obtenemos el año actual para referencia (ej: 2025)
+        const anioActual = new Date().getFullYear();
 
-        // CONFIGURACIÓN: Ignorar facturas de hace más de 6 meses
-        // Esto elimina automáticamente las facturas "zombis" del 2021
-        const FECHA_LIMITE = new Date();
-        FECHA_LIMITE.setMonth(FECHA_LIMITE.getMonth() - 6);
+        facturasRaw.forEach(f => {
+            // Obtenemos la fecha de la factura. Si falla, usamos la fecha de hoy por seguridad.
+            const fechaStr = f.first_due_date || f.created_at || new Date().toISOString();
+            const fechaFactura = new Date(fechaStr);
+            const anioFactura = fechaFactura.getFullYear();
 
-        console.log(`📊 Total Facturas en Wispro (Sucias): ${facturasRaw.length}`);
+            // --- REGLA DE ORO ---
+            // Solo aceptamos facturas del año actual (2025) y del año anterior (2024).
+            // Todo lo que sea 2023, 2022, 2021... se ignora.
+            if (anioFactura < (anioActual - 1)) {
+                // Es muy vieja (Zombie), la saltamos.
+                return;
+            }
 
-        if (Array.isArray(facturasRaw)) {
-            facturasRaw.forEach(f => {
-                // Validación 1: Que la factura sea de este cliente (por seguridad)
-                if (f.client_id && String(f.client_id) !== String(clienteId)) return;
+            // Si pasa el filtro, sumamos
+            deudaTotal += parseFloat(f.balance || 0);
 
-                // Validación 2: FILTRO DE FECHA (Aquí ocurre la magia)
-                const fechaFactura = new Date(f.first_due_date || f.created_at);
-                
-                // Si la factura es más vieja que 6 meses, la saltamos
-                if (fechaFactura < FECHA_LIMITE) {
-                    console.log(`🗑️ Ignorando factura vieja del ${fechaFactura.toISOString().split('T')[0]} (Posible error administrativo)`);
-                    return; 
+            // Calcular fecha a mostrar
+            let fechaFinal = f.first_due_date || f.second_due_date;
+            if (!fechaFinal && f.created_at) fechaFinal = f.created_at.split('T')[0];
+
+            if (fechaFinal) {
+                if (!fechaVencimiento || fechaFinal < fechaVencimiento) {
+                    fechaVencimiento = fechaFinal;
                 }
-
-                // Si es reciente (menos de 6 meses), la sumamos
-                deudaTotal += parseFloat(f.balance || 0);
-
-                // Calculamos fecha de vencimiento para mostrar
-                let fechaFinal = f.first_due_date || f.second_due_date;
-                if (!fechaFinal && f.created_at) fechaFinal = f.created_at.split('T')[0];
-
-                if (fechaFinal) {
-                    if (!fechaVencimiento || fechaFinal < fechaVencimiento) {
-                        fechaVencimiento = fechaFinal;
-                    }
-                }
-            });
-        }
-
-        console.log(`💰 Deuda Real (Limpia): $${deudaTotal}`);
+            }
+        });
 
         // --- PASO 4: RESPUESTA ---
         const contratos = contratosData.data || [];
         let contratoActivo = contratos.find(c => c.state === 'enabled');
-        if (!contratoActivo) contratoActivo = contratos.find(c => c.state === 'disabled'); // Si está cortado, tomamos ese
+        if (!contratoActivo) contratoActivo = contratos.find(c => c.state === 'disabled');
         contratoActivo = contratoActivo || {};
 
         res.status(200).json({
