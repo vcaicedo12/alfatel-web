@@ -14,156 +14,126 @@ export default async function handler(req, res) {
 
     if (!cedula) return res.status(400).json({ error: 'Cédula requerida' });
 
-    // LIMPIEZA AGRESIVA: Quitamos TODOS los caracteres no numéricos
+    // LIMPIEZA AGRESIVA: Solo números
     cedula = cedula.toString().replace(/\D/g, '');
 
     try {
         const headers = { 'Accept': 'application/json', 'Authorization': API_TOKEN };
         const baseUrl = "https://www.cloud.wispro.co"; 
         
-        // --- PASO 1: ENCONTRAR AL CLIENTE (MÚLTIPLES INTENTOS) ---
-        let clientes = [];
+        // --- PASO 1: ENCONTRAR AL CLIENTE ---
+        let cliente = null;
         let intentos = [
-            // Intento 1: Por cédula exacta
-            `${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`,
-            // Intento 2: Por RUC con 001
-            `${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}001`,
-            // Intento 3: Por RUC directo
-            `${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`,
-            // Intento 4: Búsqueda parcial por cédula (contains)
-            `${baseUrl}/api/v1/clients?national_identification_number_cont=${cedula}`,
+            { url: `${baseUrl}/api/v1/clients?national_identification_number_eq=${cedula}`, tipo: 'Cédula exacta' },
+            { url: `${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}001`, tipo: 'RUC con 001' },
+            { url: `${baseUrl}/api/v1/clients?taxpayer_identification_number_eq=${cedula}`, tipo: 'RUC directo' },
+            { url: `${baseUrl}/api/v1/clients?national_identification_number_cont=${cedula}`, tipo: 'Búsqueda parcial' },
         ];
 
-        for (let url of intentos) {
-            const resp = await fetch(url, { headers });
+        for (let intento of intentos) {
+            const resp = await fetch(intento.url, { headers });
             const json = await resp.json();
+            
             if (json.data && json.data.length > 0) {
-                clientes = json.data;
-                console.log(`✅ Cliente encontrado con: ${url}`);
+                cliente = json.data[0];
+                console.log(`✅ Cliente encontrado con: ${intento.tipo}`);
                 break;
             }
         }
 
-        if (clientes.length === 0) {
+        if (!cliente) {
             return res.status(404).json({ error: 'Cliente no encontrado con cédula: ' + cedula });
         }
 
-        const cliente = clientes[0];
         const clienteId = cliente.id;
-
         console.log(`👤 Cliente: ${cliente.name} | ID: ${clienteId}`);
 
-        // --- PASO 2: BUSCAR FACTURAS Y CONTRATOS ---
-        const invoicesUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}`;
-        const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
+        // --- PASO 2: OBTENER DETALLES COMPLETOS DEL CLIENTE (INCLUYE BALANCE) ---
+        // Este endpoint trae el balance C/C calculado por Wispro
+        const clienteDetalleResp = await fetch(`${baseUrl}/api/v1/clients/${clienteId}`, { headers });
+        const clienteDetalle = await clienteDetalleResp.json();
 
-        const [facturasResp, contratosResp] = await Promise.all([
-            fetch(invoicesUrl, { headers }),
-            fetch(contractsUrl, { headers })
-        ]);
+        // --- PASO 3: EXTRAER BALANCE REAL ---
+        // Wispro calcula automáticamente: balance = credito - facturas_impagas
+        let deudaReal = 0;
+        let creditoDisponible = 0;
+        let facturasImpagas = 0;
 
-        if (!facturasResp.ok) {
-            throw new Error(`Error al obtener facturas: ${facturasResp.status}`);
+        // El balance puede venir en diferentes campos según la configuración de Wispro
+        if (clienteDetalle.balance !== undefined && clienteDetalle.balance !== null) {
+            deudaReal = parseFloat(clienteDetalle.balance);
+        } else if (clienteDetalle.current_account_balance !== undefined) {
+            deudaReal = parseFloat(clienteDetalle.current_account_balance);
         }
 
-        const facturasData = await facturasResp.json();
+        // Información adicional del balance
+        if (clienteDetalle.credit !== undefined) {
+            creditoDisponible = parseFloat(clienteDetalle.credit || 0);
+        }
+        if (clienteDetalle.unpaid_invoices !== undefined) {
+            facturasImpagas = parseFloat(clienteDetalle.unpaid_invoices || 0);
+        }
+
+        // Si el balance es negativo, el cliente DEBE ese monto
+        // Si es positivo, tiene crédito a favor
+        const deuda = deudaReal < 0 ? Math.abs(deudaReal) : 0;
+
+        console.log(`💰 Balance C/C: ${deudaReal}`);
+        console.log(`💳 Crédito disponible: ${creditoDisponible}`);
+        console.log(`📄 Facturas impagas: ${facturasImpagas}`);
+        console.log(`🔴 DEUDA REAL: ${deuda}`);
+
+        // --- PASO 4: OBTENER INFO DE CONTRATOS ---
+        const contractsUrl = `${baseUrl}/api/v1/contracts?client_id_eq=${clienteId}`;
+        const contratosResp = await fetch(contractsUrl, { headers });
         const contratosData = await contratosResp.json();
 
-        // --- PASO 3: CALCULAR DEUDA REAL ---
-        let deudaTotal = 0;
-        let fechaVencimiento = null;
-        const facturasRaw = facturasData.data || [];
-        let facturasConDeuda = [];
-
-        console.log(`📊 Total de facturas encontradas: ${facturasRaw.length}`);
-
-        // Procesar TODAS las facturas
-        for (let i = 0; i < facturasRaw.length; i++) {
-            const f = facturasRaw[i];
-            
-            // Convertir balance de forma segura
-            let balance = 0;
-            if (f.balance !== null && f.balance !== undefined && f.balance !== '') {
-                balance = parseFloat(String(f.balance).replace(/[^0-9.-]/g, ''));
-            }
-
-            // Log de CADA factura para debugging
-            console.log(`📄 Factura #${f.invoice_number || 'N/A'}: Balance=$${balance} | Estado=${f.state}`);
-
-            // Filtros de exclusión
-            if (f.state === 'void') {
-                console.log(`   ↳ ❌ Anulada - ignorada`);
-                continue;
-            }
-
-            if (f.state === 'draft') {
-                console.log(`   ↳ ❌ Borrador - ignorada`);
-                continue;
-            }
-
-            if (isNaN(balance) || balance <= 0) {
-                console.log(`   ↳ ✅ Sin deuda - ignorada`);
-                continue;
-            }
-
-            // Esta factura tiene deuda real
-            console.log(`   ↳ 💰 DEUDA DETECTADA: $${balance}`);
-            
-            deudaTotal += balance;
-            facturasConDeuda.push({
-                numero: f.invoice_number,
-                balance: balance,
-                estado: f.state,
-                fecha: f.issued_at || f.created_at
-            });
-
-            // Calcular fecha de vencimiento más antigua
-            const fechaFinal = f.first_due_date || (f.issued_at ? f.issued_at.split('T')[0] : null);
-            if (fechaFinal) {
-                if (!fechaVencimiento || fechaFinal < fechaVencimiento) {
-                    fechaVencimiento = fechaFinal;
-                }
-            }
-        }
-
-        console.log(`\n💵 RESUMEN:`);
-        console.log(`   Total facturas: ${facturasRaw.length}`);
-        console.log(`   Facturas con deuda: ${facturasConDeuda.length}`);
-        console.log(`   💰 DEUDA TOTAL: $${deudaTotal.toFixed(2)}`);
-
-        // --- PASO 4: OBTENER INFO DEL CONTRATO ---
         const contratos = contratosData.data || [];
         let contratoActivo = contratos.find(c => c.state === 'enabled');
         if (!contratoActivo) contratoActivo = contratos.find(c => c.state === 'disabled');
         contratoActivo = contratoActivo || {};
 
+        // --- PASO 5: BUSCAR FECHA DE VENCIMIENTO (OPCIONAL) ---
+        let fechaVencimiento = null;
+        if (deuda > 0) {
+            // Solo buscamos facturas pendientes si hay deuda
+            const facturasUrl = `${baseUrl}/api/v1/invoicing/invoices?client_id_eq=${clienteId}&state_eq=pending`;
+            const facturasResp = await fetch(facturasUrl, { headers });
+            const facturasData = await facturasResp.json();
+            const facturas = facturasData.data || [];
+
+            // Encontrar la fecha de vencimiento más antigua
+            facturas.forEach(f => {
+                const fecha = f.first_due_date || (f.issued_at ? f.issued_at.split('T')[0] : null);
+                if (fecha && (!fechaVencimiento || fecha < fechaVencimiento)) {
+                    fechaVencimiento = fecha;
+                }
+            });
+        }
+
         // --- RESPUESTA FINAL ---
-        const respuesta = {
+        res.status(200).json({
             nombre: cliente.name,
             cedula: cliente.national_identification_number || cliente.taxpayer_identification_number,
             estado: contratoActivo.state || 'desconocido',
             plan: contratoActivo.plan_name || cliente.plan_name || 'Plan Básico',
             ip: contratoActivo.ip || '---',
-            deuda: parseFloat(deudaTotal.toFixed(2)),
+            deuda: deuda, // DEUDA REAL según Balance C/C
             fechaVencimiento: fechaVencimiento,
             encontrado: true,
-            // Información detallada para debugging
-            detalleFacturas: facturasConDeuda,
-            resumen: {
-                totalFacturas: facturasRaw.length,
-                facturasConDeuda: facturasConDeuda.length,
-                clienteId: clienteId
+            // Info adicional del balance
+            balanceInfo: {
+                balanceCC: deudaReal,
+                creditoDisponible: creditoDisponible,
+                facturasImpagas: facturasImpagas
             }
-        };
-
-        res.status(200).json(respuesta);
+        });
 
     } catch (error) {
-        console.error("❌ ERROR GENERAL:", error);
+        console.error("❌ ERROR:", error);
         res.status(500).json({ 
             error: 'Error interno del servidor',
-            detalle: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            detalle: error.message
         });
     }
 }
