@@ -56,7 +56,14 @@
     overflow-y: auto;
     -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
 }
-
+/* Clases para los logos */
+  .logo-header {
+    @apply h-16 md:h-20 w-auto object-contain transition-transform mix-blend-multiply;
+  }
+  
+  .logo-footer {
+    @apply h-12 md:h-16 w-auto object-contain;
+  }
 /* Scrollbar invisible pero funcional en móvil */
 #suggestions-list::-webkit-scrollbar { width: 4px; }
 #suggestions-list::-webkit-scrollbar-track { background: transparent; }
@@ -94,6 +101,7 @@
 .modal.open {
     opacity: 1;
     pointer-events: auto;
+    
 }
 
 /* Loader */
