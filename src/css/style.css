@@ -57,12 +57,15 @@
     -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
 }
 /* Clases para los logos */
+/* Clases para los logos (MÁS GRANDES) */
   .logo-header {
-    @apply h-16 md:h-20 w-auto object-contain transition-transform mix-blend-multiply;
+    /* h-20 (80px) en celular, h-28 (112px) en computadora */
+    @apply h-20 md:h-28 w-auto object-contain transition-transform mix-blend-multiply;
   }
   
   .logo-footer {
-    @apply h-12 md:h-16 w-auto object-contain;
+    /* h-16 (64px) en celular, h-24 (96px) en computadora */
+    @apply h-16 md:h-24 w-auto object-contain;
   }
 /* Scrollbar invisible pero funcional en móvil */
 #suggestions-list::-webkit-scrollbar { width: 4px; }
