@@ -60,7 +60,7 @@
 /* Clases para los logos (MÁS GRANDES) */
   .logo-header {
     /* h-20 (80px) en celular, h-28 (112px) en computadora */
-    @apply h-28 md:h-32 w-auto object-contain transition-transform mix-blend-multiply;
+    @apply h-32 md:h-36 w-auto object-contain transition-transform mix-blend-multiply;
   }
   
   .logo-footer {
