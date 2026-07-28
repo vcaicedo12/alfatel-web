@@ -3,36 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ALFATEL | Internet de Fibra Óptica y Aire</title>
-    <meta name="description" content="Internet de fibra óptica de ultra velocidad y cobertura rural por antena.">
+    <title>ALFATEL | Internet para tu hogar y zona rural</title>
+    <meta name="description" content="Planes de internet ALFATEL para conectar, entretener y proteger tu hogar en zonas urbanas y rurales.">
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/src/style.css">
 </head>
-<body class="bg-brand-light text-slate-600 antialiased selection:bg-brand-orange selection:text-white overflow-x-hidden">
+<body class="bg-[#0A1C3C] text-[#D1D5DB] antialiased selection:bg-[#F79F1F] selection:text-white overflow-x-hidden">
 
     <!-- Menú principal -->
     <header class="fixed w-full top-0 z-40 glass-nav transition-all duration-300" id="navbar">
         <div class="container mx-auto px-4 md:px-6 py-2 md:py-3">
             <div class="flex justify-between items-center">
                 
-                <!-- LOGO PRINCIPAL -->
-                <a href="#" class="flex items-center gap-2 group">
-                    <img src="/logo-alfatel.png" alt="Logo Alfatel" class="h-24 sm:h-28 md:h-32 w-auto object-contain transition-transform group-hover:scale-105 mix-blend-multiply">
-                </a>
+              <!-- LOGO PRINCIPAL -->
+<!-- LOGO PRINCIPAL -->
+<a
+    href="#inicio"
+    class="brand-logo brand-logo--header group"
+    aria-label="ALFATEL - Ir al inicio"
+>
+    <img
+        src="/logo-alfatel.png"
+        alt="Logo ALFATEL"
+        class="brand-logo__image brand-logo__image--header"
+    >
+</a>
 
                 <nav class="hidden md:flex items-center space-x-8">
-                    <a href="#inicio" class="text-sm font-semibold text-slate-600 hover:text-brand-orange transition-colors">Inicio</a>
-                    <a href="#fibra" class="text-sm font-semibold text-slate-600 hover:text-brand-orange transition-colors">Fibra Óptica</a>
-                    <a href="#antena" class="text-sm font-semibold text-slate-600 hover:text-brand-orange transition-colors">Internet Aire</a>
-                    <button onclick="toggleModal()" class="flex items-center gap-2 text-sm font-semibold text-brand-orange hover:text-orange-700 transition-colors">
+                    <a href="#inicio" class="text-sm font-semibold text-[#D1D5DB] hover:text-[#F79F1F] transition-colors">Inicio</a>
+                    <a href="#fibra" class="text-sm font-semibold text-[#D1D5DB] hover:text-[#F79F1F] transition-colors">Fibra Óptica</a>
+                    <a href="#antena" class="text-sm font-semibold text-[#D1D5DB] hover:text-[#F79F1F] transition-colors">Internet Aire</a>
+                    <button onclick="toggleModal()" class="flex items-center gap-2 text-sm font-semibold text-[#F79F1F] hover:text-[#F59E0B] transition-colors">
                         <i data-lucide="user-circle" class="w-4 h-4"></i> Zona Clientes
                     </button>
-                    <a href="#contacto" class="px-6 py-2.5 rounded-full bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Contactar</a>
+                    <a href="#contacto" class="px-6 py-2.5 rounded-full bg-gradient-brand text-white font-semibold text-sm hover:opacity-90 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5">Contactar</a>
                 </nav>
 
-                <button id="mobile-menu-btn" onclick="toggleMenu()" class="md:hidden p-2 rounded-lg text-slate-800 hover:bg-slate-100 focus:outline-none relative z-50">
+                <button id="mobile-menu-btn" onclick="toggleMenu()" class="md:hidden p-2 rounded-lg text-white hover:bg-white/10 focus:outline-none relative z-50">
                     <span id="icon-hamburger" class="block">
                         <i data-lucide="menu" class="w-8 h-8"></i>
                     </span>
@@ -46,7 +56,7 @@
 
     <!-- Modal Zona Clientes -->
     <div id="clientModal" class="modal fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4">
-        <div class="absolute inset-0 bg-slate-900/90 backdrop-blur-sm" onclick="toggleModal()"></div>
+        <div class="absolute inset-0 bg-[#06142D]/95 backdrop-blur-sm" onclick="toggleModal()"></div>
         
         <div class="bg-white rounded-t-[30px] sm:rounded-3xl shadow-2xl w-full max-w-md relative z-10 transform transition-all scale-100 max-h-[90vh] overflow-y-auto">
             
@@ -72,7 +82,7 @@
                             <input 
                                 type="number" 
                                 id="cedula" 
-                                class="block w-full pl-10 pr-3 py-3.5 border border-slate-300 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-transparent text-base transition-shadow appearance-none" 
+                                class="block w-full pl-10 pr-3 py-3.5 border border-slate-300 rounded-xl leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#F79F1F] focus:border-transparent text-base transition-shadow appearance-none" 
                                 placeholder="Ej: 1720..." 
                                 autocomplete="off" 
                                 required
@@ -82,14 +92,14 @@
                     
                     <div class="mb-6 flex items-start gap-3">
                         <div class="flex items-center h-5">
-                            <input id="terms" name="terms" type="checkbox" class="w-4 h-4 border border-slate-300 rounded bg-gray-50 focus:ring-3 focus:ring-orange-300" required>
+                            <input id="terms" name="terms" type="checkbox" class="w-4 h-4 border border-slate-300 rounded bg-gray-50 focus:ring-3 focus:ring-[#F79F1F]" required>
                         </div>
                         <label for="terms" class="text-xs text-slate-500 text-left leading-tight">
-                            Declaro ser el titular o tener autorización para consultar estos datos. Acepto la <a href="politica.html" target="_blank" class="text-brand-orange hover:underline font-bold">Política de Privacidad</a>.
+                            Declaro ser el titular o tener autorización para consultar estos datos. Acepto la <a href="politica.html" target="_blank" class="text-[#F79F1F] hover:underline font-bold">Política de Privacidad</a>.
                         </label>
                     </div>
 
-                    <button type="submit" class="w-full bg-slate-900 text-white font-bold py-3.5 px-4 rounded-xl hover:bg-slate-800 active:scale-95 transition-all flex items-center justify-center gap-2 group relative z-10 shadow-lg">
+                    <button type="submit" class="w-full bg-[#0A1C3C] text-white font-bold py-3.5 px-4 rounded-xl hover:bg-[#132D5C] active:scale-95 transition-all flex items-center justify-center gap-2 group relative z-10 shadow-lg">
                         <span id="btnText">Consultar Deuda</span>
                         <div id="btnLoader" class="loader hidden"></div>
                         <i id="btnIcon" data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
@@ -120,23 +130,23 @@
                             </div>
                              <div class="flex justify-between items-center border-t border-slate-200 pt-2 mt-2">
                                 <span class="text-slate-700 font-medium">A Pagar:</span>
-                                <span class="font-extrabold text-brand-orange text-lg" id="clientBalance">---</span>
+                                <span class="font-extrabold text-[#F79F1F] text-lg" id="clientBalance">---</span>
                             </div>
                         </div>
-                        <button onclick="redirigirWhatsapp('Soporte Técnico')" class="mt-4 w-full py-3 text-sm text-brand-orange font-bold bg-orange-50 hover:bg-orange-100 rounded-xl transition-colors flex items-center justify-center gap-2">
+                        <button onclick="redirigirWhatsapp('Soporte Técnico')" class="mt-4 w-full py-3 text-sm text-[#F79F1F] font-bold bg-[#FFF7ED] hover:bg-[#FFEDD5] rounded-xl transition-colors flex items-center justify-center gap-2">
                             <i data-lucide="message-square" class="w-4 h-4"></i> Contactar Soporte
                         </button>
                     </div>
                     
                     <div id="errorState" class="hidden text-center py-6 bg-slate-50 rounded-2xl border border-slate-100">
-                        <div class="w-14 h-14 rounded-full bg-orange-100 flex items-center justify-center text-orange-500 mx-auto mb-3">
+                        <div class="w-14 h-14 rounded-full bg-[#EF4444]/10 flex items-center justify-center text-[#EF4444] mx-auto mb-3">
                             <i data-lucide="alert-triangle" class="w-7 h-7"></i>
                         </div>
                         <h4 class="text-slate-900 font-bold mb-2">Cédula no registrada</h4>
                         <p class="text-slate-600 text-sm px-4 mb-4 leading-relaxed">
                             No encontramos esta cédula. Si eres cliente, actualiza tus datos para ver tu factura.
                         </p>
-                        <button onclick="redirigirWhatsapp('Actualizar Datos')" class="mx-auto px-6 py-2 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-slate-800 transition-colors flex items-center gap-2">
+                        <button onclick="redirigirWhatsapp('Actualizar Datos')" class="mx-auto px-6 py-2 bg-[#0A1C3C] text-white text-sm font-bold rounded-lg hover:bg-[#132D5C] transition-colors flex items-center gap-2">
                             <i data-lucide="refresh-cw" class="w-4 h-4"></i> Actualizar Datos
                         </button>
                     </div>
@@ -147,9 +157,9 @@
 
     <!-- Hero Section -->
     <section id="inicio" class="relative pt-28 pb-20 md:pt-48 md:pb-48 overflow-hidden">
-        <div class="absolute inset-0 bg-slate-900">
+        <div class="absolute inset-0 bg-[#0A1C3C]">
             <div class="absolute inset-0 bg-hero-pattern bg-cover bg-center opacity-40 mix-blend-overlay"></div>
-            <div class="absolute inset-0 bg-gradient-to-b from-slate-900/50 via-slate-900/80 to-slate-900"></div>
+            <div class="absolute inset-0 bg-gradient-to-b from-[#0A1C3C]/40 via-[#0A1C3C]/80 to-[#0A1C3C]"></div>
         </div>
         <div class="container mx-auto px-4 relative z-10 text-center">
             <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white text-xs md:text-sm font-medium mb-6 animate-bounce">
@@ -157,14 +167,14 @@
                 Cobertura expandida en tu zona
             </div>
             <h1 class="text-4xl md:text-7xl font-extrabold text-white mb-6 tracking-tight leading-[1.1]">
-                El Internet que tu <br />
-                <span class="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-yellow-400">futuro necesita.</span>
+                Internet pensado para <br />
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-[#EF4444] to-[#F59E0B]">tu forma de vivir.</span>
             </h1>
-            <p class="text-base md:text-xl text-slate-300 mb-8 max-w-2xl mx-auto leading-relaxed px-2">
-                Fibra óptica 100% simétrica y conexión inalámbrica rural. Estabilidad, potencia y soporte técnico humano.
+            <p class="text-base md:text-xl text-[#D1D5DB] mb-8 max-w-2xl mx-auto leading-relaxed px-2">
+                Conecta a tu familia, trabaja, estudia, disfruta entretenimiento y protege tu hogar con el respaldo cercano de ALFATEL.
             </p>
             <div class="flex flex-col sm:flex-row justify-center gap-4 px-4">
-                <button onclick="scrollToSection('fibra')" class="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-brand text-white font-bold text-lg shadow-lg shadow-orange-500/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
+                <button onclick="scrollToSection('fibra')" class="w-full sm:w-auto px-8 py-4 rounded-full bg-gradient-brand text-white font-bold text-lg shadow-lg shadow-[#F79F1F]/40 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2">
                     Ver Planes <i data-lucide="arrow-right" class="w-5 h-5"></i>
                 </button>
                 <button onclick="redirigirWhatsapp()" class="w-full sm:w-auto px-8 py-4 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white font-bold text-lg hover:bg-white/20 active:scale-95 transition-all flex items-center justify-center gap-2">
@@ -177,36 +187,36 @@
     <!-- Stats Section -->
     <div class="relative z-20 -mt-10 md:-mt-24 px-4 md:px-6">
         <div class="container mx-auto max-w-5xl">
-            <div class="bg-white rounded-2xl md:rounded-3xl shadow-xl shadow-slate-900/10 p-6 md:p-12 border border-slate-100 reveal relative overflow-hidden">
-                <div class="absolute inset-0 bg-gradient-to-b from-white to-slate-50 opacity-50 z-0"></div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 divide-none md:divide-x divide-slate-100 relative z-10">
+            <div class="bg-white/5 backdrop-blur-xl rounded-2xl md:rounded-3xl shadow-xl shadow-black/20 p-6 md:p-12 border border-white/10 reveal relative overflow-hidden">
+                <div class="absolute inset-0 bg-gradient-to-b from-white/10 to-transparent opacity-70 z-0"></div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 divide-none md:divide-x divide-white/10 relative z-10">
                     <div class="text-center">
                         <div class="flex items-center justify-center gap-2 mb-1">
-                            <i data-lucide="zap" class="w-4 h-4 md:w-5 md:h-5 text-brand-orange"></i>
-                            <p class="text-2xl md:text-3xl font-extrabold text-slate-900">100%</p>
+                            <i data-lucide="zap" class="w-4 h-4 md:w-5 md:h-5 text-[#F79F1F]"></i>
+                            <p class="text-2xl md:text-3xl font-extrabold text-white">100%</p>
                         </div>
-                        <p class="text-xs md:text-sm font-medium text-slate-500 uppercase tracking-wide">Fibra Pura</p>
+                        <p class="text-xs md:text-sm font-medium text-[#D1D5DB] uppercase tracking-wide">Fibra Pura</p>
                     </div>
                     <div class="text-center">
                         <div class="flex items-center justify-center gap-2 mb-1">
-                            <i data-lucide="arrow-up-down" class="w-4 h-4 md:w-5 md:h-5 text-brand-orange"></i>
-                            <p class="text-2xl md:text-3xl font-extrabold text-slate-900">Igual</p>
+                            <i data-lucide="arrow-up-down" class="w-4 h-4 md:w-5 md:h-5 text-[#F79F1F]"></i>
+                            <p class="text-2xl md:text-3xl font-extrabold text-white">Libre</p>
                         </div>
-                        <p class="text-xs md:text-sm font-medium text-slate-500 uppercase tracking-wide">Subida/Bajada</p>
+                        <p class="text-xs md:text-sm font-medium text-[#D1D5DB] uppercase tracking-wide">Sin permanencia</p>
                     </div>
                     <div class="text-center">
                         <div class="flex items-center justify-center gap-2 mb-1">
-                            <i data-lucide="clock" class="w-4 h-4 md:w-5 md:h-5 text-brand-orange"></i>
-                            <p class="text-2xl md:text-3xl font-extrabold text-slate-900">24/7</p>
+                            <i data-lucide="clock" class="w-4 h-4 md:w-5 md:h-5 text-[#F79F1F]"></i>
+                            <p class="text-2xl md:text-3xl font-extrabold text-white">Local</p>
                         </div>
-                        <p class="text-xs md:text-sm font-medium text-slate-500 uppercase tracking-wide">Soporte</p>
+                        <p class="text-xs md:text-sm font-medium text-[#D1D5DB] uppercase tracking-wide">Soporte cercano</p>
                     </div>
                     <div class="text-center">
                         <div class="flex items-center justify-center gap-2 mb-1">
-                            <i data-lucide="map" class="w-4 h-4 md:w-5 md:h-5 text-brand-orange"></i>
-                            <p class="text-2xl md:text-3xl font-extrabold text-slate-900">Total</p>
+                            <i data-lucide="map" class="w-4 h-4 md:w-5 md:h-5 text-[#F79F1F]"></i>
+                            <p class="text-2xl md:text-3xl font-extrabold text-white">Total</p>
                         </div>
-                        <p class="text-xs md:text-sm font-medium text-slate-500 uppercase tracking-wide">Cobertura</p>
+                        <p class="text-xs md:text-sm font-medium text-[#D1D5DB] uppercase tracking-wide">Cobertura</p>
                     </div>
                 </div>
             </div>
@@ -214,130 +224,292 @@
     </div>
 
     <!-- Planes Fibra -->
-    <section id="fibra" class="pt-16 pb-12 bg-white">
-        <div class="container mx-auto px-4 md:px-6">
-            <div class="text-center mb-12 reveal">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100 text-brand-orange text-xs font-bold uppercase tracking-wider mb-3">
-                    <i data-lucide="zap" class="w-3 h-3"></i> Zona Urbana
+    <section id="fibra" class="plans-section plans-section--fiber">
+        <div class="plans-shell">
+            <div class="plans-heading reveal">
+                <div class="plans-kicker">
+                    <i data-lucide="house" aria-hidden="true"></i>
+                    <span>Planes para el hogar</span>
                 </div>
-                <h2 class="text-3xl md:text-5xl font-bold text-slate-900 mb-3">Fibra Óptica</h2>
-                <p class="text-slate-500 text-base md:text-lg">Velocidad extrema para tu hogar.</p>
+                <h2>Elige por lo que quieres hacer,<br><span>no por un número.</span></h2>
+                <p>
+                    Cada hogar es diferente. Por eso nuestros planes se organizan según tu estilo de vida:
+                    conexión diaria, mayor uso familiar, entretenimiento, seguridad o una experiencia completa.
+                </p>
+                <div class="plans-benefits" aria-label="Beneficios generales de los planes de hogar">
+                    <span><i data-lucide="check-circle"></i> Instalación gratuita</span>
+                    <span><i data-lucide="unlock"></i> Sin contratos de permanencia</span>
+                    <span><i data-lucide="map-pin"></i> Respaldo de una empresa local</span>
+                </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center max-w-6xl mx-auto">
-                <div class="bg-white rounded-3xl p-6 md:p-8 shadow-lg border border-slate-100 hover:shadow-2xl transition-all reveal">
-                    <h3 class="text-xl md:text-2xl font-bold text-slate-900">Alfatel Hogar</h3>
-                    <div class="flex items-baseline my-4">
-                        <span class="text-4xl md:text-5xl font-extrabold text-slate-900">$15</span>
-                        <span class="text-slate-500 ml-1">/mes</span>
+            <div class="plans-grid plans-grid--fiber">
+                <!-- ALFATEL HOGAR CONECTA -->
+                <article class="plan-card-new reveal">
+                    <div class="plan-card-top">
+                        <div class="plan-icon"><i data-lucide="home"></i></div>
+                        <span class="plan-category">Esencial</span>
                     </div>
-                    <div class="text-xs md:text-sm font-bold text-white bg-slate-900 px-4 py-2 rounded-xl inline-block mb-6">200-300 MEGAS</div>
-                    <ul class="space-y-3 mb-8">
-                        <li class="flex items-start gap-3 text-slate-600 text-sm">
-                            <i data-lucide="check" class="w-5 h-5 text-brand-orange shrink-0"></i> Fibra Óptica Pura
-                        </li>
-                        <li class="flex items-start gap-3 text-slate-600 text-sm">
-                            <i data-lucide="check" class="w-5 h-5 text-brand-orange shrink-0"></i> Router Dual Band
-                        </li>
+                    <div class="plan-name">
+                        <small>ALFATEL HOGAR</small>
+                        <h3>CONECTA</h3>
+                    </div>
+                    <p class="plan-description">
+                        Ideal para familias que desean una conexión estable para estudiar, trabajar, navegar
+                        y disfrutar del entretenimiento diario.
+                    </p>
+                    <ul class="plan-features">
+                        <li><i data-lucide="graduation-cap"></i><span>Estudio y clases virtuales</span></li>
+                        <li><i data-lucide="briefcase"></i><span>Trabajo y navegación diaria</span></li>
+                        <li><i data-lucide="users"></i><span>Uso cotidiano para la familia</span></li>
                     </ul>
-                    <button onclick="contratarPlan('Fibra Hogar 200 Megas - $15')" class="w-full py-3 rounded-xl border-2 border-slate-900 text-slate-900 font-bold hover:bg-slate-900 hover:text-white active:bg-slate-800 transition-colors">
-                        Solicitar Plan
-                    </button>
-                </div>
+                    <div class="plan-card-bottom">
+                        <div class="plan-price"><span>Mensual</span><strong>$15</strong><small>/mes</small></div>
+                        <button type="button" onclick="contratarPlan('ALFATEL HOGAR CONECTA - $15 mensuales')" class="plan-button plan-button--outline">
+                            Elegir Conecta <i data-lucide="arrow-right"></i>
+                        </button>
+                    </div>
+                </article>
 
-                <div class="relative bg-slate-50 rounded-3xl p-6 md:p-8 shadow-xl border border-orange-200 transform md:scale-105 z-10 reveal delay-100 mt-4 md:mt-0">
-                    <div class="absolute -top-3 left-0 right-0 flex justify-center"><span class="bg-brand-orange text-white text-[10px] md:text-xs font-bold px-4 py-1 rounded-full uppercase tracking-wider shadow-lg">Más Vendido</span></div>
-                    <h3 class="text-xl md:text-2xl font-bold text-slate-900">Hogar Plus +</h3>
-                    <div class="flex items-baseline my-4"><span class="text-4xl md:text-5xl font-extrabold text-brand-orange">$20</span><span class="text-slate-500 ml-1">/mes</span></div>
-                    <div class="text-xs md:text-sm font-bold text-white bg-gradient-brand px-4 py-2 rounded-xl inline-block mb-6">400-500 MEGAS</div>
-                    <div class="bg-white p-3 rounded-xl border border-orange-100 mb-6 flex items-center gap-3 shadow-sm">
-                        <div class="bg-orange-100 p-2 rounded-lg text-brand-orange"><i data-lucide="wifi" class="w-5 h-5"></i></div>
-                        <div><p class="text-[10px] text-slate-400 font-bold uppercase">Incluye Gratis:</p><p class="text-sm font-bold text-slate-800">Extensor WiFi</p></div>
+                <!-- ALFATEL HOGAR AVANZA -->
+                <article class="plan-card-new plan-card-new--popular reveal delay-100">
+                    <div class="plan-ribbon"><i data-lucide="star"></i> Recomendado</div>
+                    <div class="plan-card-top">
+                        <div class="plan-icon"><i data-lucide="rocket"></i></div>
+                        <span class="plan-category">Más capacidad</span>
                     </div>
-                    <ul class="space-y-3 mb-8">
-                        <li class="flex items-start gap-3 text-slate-600 text-sm"><i data-lucide="check" class="w-5 h-5 text-brand-orange shrink-0"></i> Mayor Cobertura WiFi</li>
-                        <li class="flex items-start gap-3 text-slate-600 text-sm"><i data-lucide="check" class="w-5 h-5 text-brand-orange shrink-0"></i> Streaming 4K</li>
+                    <div class="plan-name">
+                        <small>ALFATEL HOGAR</small>
+                        <h3>AVANZA</h3>
+                    </div>
+                    <p class="plan-description">
+                        Pensado para hogares con varios dispositivos conectados al mismo tiempo y usuarios
+                        que requieren mayor capacidad para teletrabajo, clases virtuales y entretenimiento.
+                    </p>
+                    <ul class="plan-features">
+                        <li><i data-lucide="wifi"></i><span>Varios dispositivos conectados</span></li>
+                        <li><i data-lucide="monitor"></i><span>Teletrabajo y clases virtuales</span></li>
+                        <li><i data-lucide="clapperboard"></i><span>Entretenimiento familiar</span></li>
                     </ul>
-                    <button onclick="contratarPlan('Fibra Hogar Plus 400 Megas - $20')" class="w-full py-4 rounded-xl bg-gradient-brand text-white font-bold shadow-lg shadow-orange-500/30 hover:opacity-90 active:scale-95 transition-all">¡Lo Quiero!</button>
-                </div>
+                    <div class="plan-card-bottom">
+                        <div class="plan-price"><span>Mensual</span><strong>$20</strong><small>/mes</small></div>
+                        <button type="button" onclick="contratarPlan('ALFATEL HOGAR AVANZA - $20 mensuales')" class="plan-button plan-button--primary">
+                            Elegir Avanza <i data-lucide="arrow-right"></i>
+                        </button>
+                    </div>
+                </article>
 
-                <div class="bg-slate-900 rounded-3xl p-6 md:p-8 shadow-2xl border border-slate-800 mt-4 md:mt-0 reveal delay-200">
-                    <h3 class="text-xl md:text-2xl font-bold text-white">Hogar Pro</h3>
-                    <div class="flex items-baseline my-4"><span class="text-4xl md:text-5xl font-extrabold text-white">$25</span><span class="text-slate-400 ml-1">/mes</span></div>
-                    <div class="text-xs md:text-sm font-bold text-slate-900 bg-white px-4 py-2 rounded-xl inline-block mb-6">600-700 MEGAS</div>
-                    <div class="mb-6">
-                        <p class="text-[10px] text-brand-orange font-bold uppercase mb-2">🎁 Elige 1 Regalo Gratis:</p>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div class="bg-slate-800 p-2 rounded-lg text-center border border-slate-700"><i data-lucide="wifi" class="w-4 h-4 text-white mx-auto mb-1"></i><span class="text-[9px] text-slate-300 block">Extensor</span></div>
-                            <div class="bg-slate-800 p-2 rounded-lg text-center border border-slate-700"><i data-lucide="tv" class="w-4 h-4 text-white mx-auto mb-1"></i><span class="text-[9px] text-slate-300 block">Zapping</span></div>
-                            <div class="bg-slate-800 p-2 rounded-lg text-center border border-slate-700"><i data-lucide="cctv" class="w-4 h-4 text-white mx-auto mb-1"></i><span class="text-[9px] text-slate-300 block">Cámara</span></div>
-                        </div>
+                <!-- ALFATEL HOGAR PLAY -->
+                <article class="plan-card-new reveal delay-200">
+                    <div class="plan-card-top">
+                        <div class="plan-icon"><i data-lucide="tv"></i></div>
+                        <span class="plan-category">Entretenimiento</span>
                     </div>
-                    <ul class="space-y-3 mb-8">
-                        <li class="flex items-start gap-3 text-slate-400 text-sm"><i data-lucide="check" class="w-5 h-5 text-brand-orange shrink-0"></i> Velocidad Extrema</li>
-                        <li class="flex items-start gap-3 text-slate-400 text-sm"><i data-lucide="check" class="w-5 h-5 text-brand-orange shrink-0"></i> Dispositivos Ilimitados</li>
+                    <div class="plan-name">
+                        <small>ALFATEL HOGAR</small>
+                        <h3>PLAY</h3>
+                    </div>
+                    <p class="plan-description">
+                        La mejor opción para quienes disfrutan del entretenimiento en casa, combinando
+                        internet con televisión por internet mediante ALFATEL PLAY.
+                    </p>
+                    <ul class="plan-features">
+                        <li><i data-lucide="play"></i><span>ALFATEL PLAY incluido</span></li>
+                        <li><i data-lucide="tv"></i><span>Entretenimiento para el hogar</span></li>
+                        <li><i data-lucide="smartphone"></i><span>Contenido en tus dispositivos</span></li>
                     </ul>
-                    <button onclick="contratarPlan('Fibra Hogar Pro 600 Megas - $25')" class="w-full py-3 rounded-xl border border-white text-white font-bold hover:bg-white hover:text-slate-900 active:scale-95 transition-colors">Elegir Regalo</button>
-                </div>
+                    <div class="plan-card-bottom">
+                        <div class="plan-price"><span>Mensual</span><strong>$25</strong><small>/mes</small></div>
+                        <button type="button" onclick="contratarPlan('ALFATEL HOGAR PLAY con televisión - $25 mensuales')" class="plan-button plan-button--outline">
+                            Elegir Play <i data-lucide="arrow-right"></i>
+                        </button>
+                    </div>
+                </article>
+
+                <!-- ALFATEL HOGAR PROTEGE -->
+                <article class="plan-card-new plan-card-new--security reveal">
+                    <div class="plan-card-top">
+                        <div class="plan-icon"><i data-lucide="shield"></i></div>
+                        <span class="plan-category">Seguridad</span>
+                    </div>
+                    <div class="plan-name">
+                        <small>ALFATEL HOGAR</small>
+                        <h3>PROTEGE</h3>
+                    </div>
+                    <p class="plan-description">
+                        Diseñado para familias que desean cuidar su hogar con una cámara de seguridad
+                        conectada y monitoreo directamente desde su teléfono.
+                    </p>
+                    <ul class="plan-features">
+                        <li><i data-lucide="cctv"></i><span>Cámara de seguridad incluida</span></li>
+                        <li><i data-lucide="smartphone"></i><span>Monitoreo desde el celular</span></li>
+                        <li><i data-lucide="eye"></i><span>Mayor tranquilidad para tu hogar</span></li>
+                    </ul>
+                    <div class="plan-card-bottom">
+                        <div class="plan-price"><span>Mensual</span><strong>$25</strong><small>/mes</small></div>
+                        <button type="button" onclick="contratarPlan('ALFATEL HOGAR PROTEGE con cámara - $25 mensuales')" class="plan-button plan-button--outline">
+                            Elegir Protege <i data-lucide="arrow-right"></i>
+                        </button>
+                    </div>
+                </article>
+
+                <!-- ALFATEL HOGAR TOTAL -->
+                <article class="plan-card-new plan-card-new--total reveal delay-100">
+                    <div class="plan-ribbon"><i data-lucide="crown"></i> Experiencia completa</div>
+                    <div class="plan-card-top">
+                        <div class="plan-icon"><i data-lucide="sparkles"></i></div>
+                        <span class="plan-category">Todo en uno</span>
+                    </div>
+                    <div class="plan-name">
+                        <small>ALFATEL HOGAR</small>
+                        <h3>TOTAL</h3>
+                    </div>
+                    <p class="plan-description">
+                        La experiencia más completa de ALFATEL: internet, entretenimiento y protección
+                        del hogar reunidos en un solo plan.
+                    </p>
+                    <ul class="plan-features">
+                        <li><i data-lucide="wifi"></i><span>Internet para toda la familia</span></li>
+                        <li><i data-lucide="tv"></i><span>Televisión con ALFATEL PLAY</span></li>
+                        <li><i data-lucide="cctv"></i><span>Cámara y monitoreo móvil</span></li>
+                    </ul>
+                    <div class="plan-card-bottom">
+                        <div class="plan-price"><span>Mensual</span><strong>$30</strong><small>/mes</small></div>
+                        <button type="button" onclick="contratarPlan('ALFATEL HOGAR TOTAL con TV y cámara - $30 mensuales')" class="plan-button plan-button--light">
+                            Quiero el plan Total <i data-lucide="arrow-right"></i>
+                        </button>
+                    </div>
+                </article>
             </div>
         </div>
     </section>
 
     <!-- Planes Antena -->
-    <section id="antena" class="py-16 md:py-24 bg-slate-50 border-t border-slate-200">
-        <div class="container mx-auto px-4 md:px-6">
-            <div class="text-center mb-12 reveal">
-                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-100 text-blue-600 text-xs font-bold uppercase tracking-wider mb-3">
-                    <i data-lucide="signal" class="w-3 h-3"></i> Zona Rural / Aire
+    <section id="antena" class="plans-section plans-section--rural">
+        <div class="rural-glow rural-glow--one"></div>
+        <div class="rural-glow rural-glow--two"></div>
+        <div class="plans-shell plans-shell--relative">
+            <div class="plans-heading plans-heading--light reveal">
+                <div class="plans-kicker plans-kicker--dark">
+                    <i data-lucide="radio" aria-hidden="true"></i>
+                    <span>Planes rurales</span>
                 </div>
-                <h2 class="text-3xl md:text-4xl font-bold text-slate-900 mb-3">Internet Inalámbrico</h2>
-                <p class="text-slate-500 text-base md:text-lg">Conexión estable por antena donde no llega la fibra.</p>
+                <h2>Conexión que acerca oportunidades<br><span>donde más la necesitas.</span></h2>
+                <p>
+                    Soluciones para hogares rurales que necesitan mantenerse comunicados, estudiar,
+                    realizar trámites, conectar varios dispositivos y disfrutar de una experiencia estable.
+                </p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center max-w-5xl mx-auto">
-                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:shadow-lg transition-all reveal">
-                    <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-slate-900">Conecta</h3><i data-lucide="signal-low" class="text-blue-500 w-5 h-5"></i></div>
-                    <div class="flex items-baseline mb-4"><span class="text-3xl md:text-4xl font-extrabold text-slate-900">$15</span><span class="text-slate-500 ml-1">/mes</span></div>
-                    <div class="text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-block mb-6">15 Megas</div>
-                    <button onclick="contratarPlan('Antena Conecta 15 Megas - $15')" class="w-full py-2 rounded-lg border border-slate-300 text-slate-700 font-bold hover:border-blue-500 hover:text-blue-500 transition-colors">Seleccionar</button>
+            <div class="plans-grid plans-grid--rural">
+                <!-- ALFATEL RURAL CONECTA -->
+                <article class="rural-card reveal">
+                    <div class="rural-card-number">01</div>
+                    <div class="rural-card-icon"><i data-lucide="message-circle"></i></div>
+                    <div class="plan-name plan-name--light">
+                        <small>ALFATEL RURAL</small>
+                        <h3>CONECTA</h3>
+                    </div>
+                    <p>
+                        Para familias rurales que desean mantenerse comunicadas, estudiar, realizar
+                        trámites y disfrutar de una conexión estable.
+                    </p>
+                    <ul>
+                        <li><i data-lucide="check"></i> Comunicación diaria</li>
+                        <li><i data-lucide="check"></i> Estudio y trámites en línea</li>
+                        <li><i data-lucide="check"></i> Conexión estable para el hogar</li>
+                    </ul>
+                    <div class="rural-card-footer">
+                        <div class="rural-price"><strong>$15</strong><span>mensuales</span></div>
+                        <button type="button" onclick="contratarPlan('ALFATEL RURAL CONECTA - $15 mensuales')">
+                            Consultar cobertura <i data-lucide="arrow-up-right"></i>
+                        </button>
+                    </div>
+                </article>
+
+                <!-- ALFATEL RURAL AVANZA -->
+                <article class="rural-card rural-card--featured reveal delay-100">
+                    <div class="rural-card-badge">Más elegido</div>
+                    <div class="rural-card-number">02</div>
+                    <div class="rural-card-icon"><i data-lucide="users"></i></div>
+                    <div class="plan-name plan-name--light">
+                        <small>ALFATEL RURAL</small>
+                        <h3>AVANZA</h3>
+                    </div>
+                    <p>
+                        Pensado para hogares rurales con mayor uso de internet y varios dispositivos
+                        conectados al mismo tiempo.
+                    </p>
+                    <ul>
+                        <li><i data-lucide="check"></i> Mayor uso familiar</li>
+                        <li><i data-lucide="check"></i> Varios dispositivos conectados</li>
+                        <li><i data-lucide="check"></i> Estudio, trabajo y entretenimiento</li>
+                    </ul>
+                    <div class="rural-card-footer">
+                        <div class="rural-price"><strong>$20</strong><span>mensuales</span></div>
+                        <button type="button" onclick="contratarPlan('ALFATEL RURAL AVANZA - $20 mensuales')">
+                            Consultar cobertura <i data-lucide="arrow-up-right"></i>
+                        </button>
+                    </div>
+                </article>
+
+                <!-- ALFATEL RURAL POTENCIA -->
+                <article class="rural-card reveal delay-200">
+                    <div class="rural-card-number">03</div>
+                    <div class="rural-card-icon"><i data-lucide="signal"></i></div>
+                    <div class="plan-name plan-name--light">
+                        <small>ALFATEL RURAL</small>
+                        <h3>POTENCIA</h3>
+                    </div>
+                    <p>
+                        La mejor experiencia de internet disponible para el sector rural dentro de la
+                        cobertura ALFATEL.
+                    </p>
+                    <ul>
+                        <li><i data-lucide="check"></i> Experiencia rural más completa</li>
+                        <li><i data-lucide="check"></i> Para hogares de uso intensivo</li>
+                        <li><i data-lucide="check"></i> Respaldo técnico ALFATEL</li>
+                    </ul>
+                    <div class="rural-card-footer">
+                        <div class="rural-price"><strong>$25</strong><span>mensuales</span></div>
+                        <button type="button" onclick="contratarPlan('ALFATEL RURAL POTENCIA - $25 mensuales')">
+                            Consultar cobertura <i data-lucide="arrow-up-right"></i>
+                        </button>
+                    </div>
+                </article>
+            </div>
+
+            <div class="rural-note reveal">
+                <i data-lucide="map-pin"></i>
+                <div>
+                    <strong>La disponibilidad depende de la cobertura en tu sector.</strong>
+                    <span>Escríbenos y nuestro equipo verificará tu ubicación antes de la instalación.</span>
                 </div>
-                <div class="bg-white rounded-3xl p-6 shadow-lg border border-blue-100 relative overflow-hidden reveal delay-100">
-                    <div class="absolute top-0 right-0 w-16 h-16 bg-blue-500 rounded-bl-full opacity-10"></div>
-                    <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-slate-900">Conecta Plus</h3><i data-lucide="signal-medium" class="text-blue-600 w-5 h-5"></i></div>
-                    <div class="flex items-baseline mb-4"><span class="text-3xl md:text-4xl font-extrabold text-slate-900">$20</span><span class="text-slate-500 ml-1">/mes</span></div>
-                    <div class="text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-block mb-6">20 Megas</div>
-                    <button onclick="contratarPlan('Antena Conecta Plus 20 Megas - $20')" class="w-full py-2 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 transition-colors">Seleccionar</button>
-                </div>
-                <div class="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 hover:shadow-lg transition-all reveal delay-200">
-                    <div class="flex justify-between items-center mb-4"><h3 class="text-lg font-bold text-slate-900">Conecta Pro</h3><i data-lucide="signal" class="text-blue-500 w-5 h-5"></i></div>
-                    <div class="flex items-baseline mb-4"><span class="text-3xl md:text-4xl font-extrabold text-slate-900">$25</span><span class="text-slate-500 ml-1">/mes</span></div>
-                    <div class="text-xs font-medium text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-block mb-6">25 Megas</div>
-                    <button onclick="contratarPlan('Antena Conecta Pro 25 Megas - $25')" class="w-full py-2 rounded-lg border border-slate-300 text-slate-700 font-bold hover:border-blue-500 hover:text-blue-500 transition-colors">Seleccionar</button>
-                </div>
+                <button type="button" onclick="redirigirWhatsapp('Deseo verificar cobertura rural')">Verificar cobertura</button>
             </div>
         </div>
     </section>
 
     <!-- SECCIÓN ALFACAM ACTUALIZADA (AQUÍ ESTÁ EL iFRAME DE TU CÁMARA) -->
-    <section id="alfacam" class="py-16 md:py-24 bg-slate-900 relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-full md:w-1/2 h-full bg-gradient-to-l from-brand-orange/10 to-transparent pointer-events-none"></div>
+    <section id="alfacam" class="py-16 md:py-24 bg-[#06142D] relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-full md:w-1/2 h-full bg-gradient-to-l from-[#F79F1F]/10 to-transparent pointer-events-none"></div>
         <div class="container mx-auto px-4 md:px-6 relative z-10">
             <div class="flex flex-col lg:flex-row items-center gap-10 md:gap-16">
                 
                 <!-- Textos e Info -->
                 <div class="lg:w-1/2 reveal text-center lg:text-left">
-                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-orange/20 text-brand-orange text-xs font-bold uppercase tracking-wider mb-6">
+                    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#F79F1F]/20 text-[#F79F1F] text-xs font-bold uppercase tracking-wider mb-6">
                         <i data-lucide="lock" class="w-3 h-3"></i> Seguridad Integrada
                     </div>
                     <h2 class="text-3xl md:text-5xl font-bold text-white mb-4">ALFACAM: Tu hogar seguro</h2>
-                    <p class="text-slate-400 text-base md:text-lg mb-8 leading-relaxed">
+                    <p class="text-[#D1D5DB] text-base md:text-lg mb-8 leading-relaxed">
                         No solo te conectamos, te protegemos. Observa nuestra cámara pública en vivo y descubre la calidad. Integra cámaras de seguridad HD con visión nocturna directamente a tu servicio.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                        <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                        <div class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
                             <i data-lucide="eye" class="w-5 h-5 text-white"></i><span class="text-white text-sm font-medium">Monitoreo 24/7</span>
                         </div>
-                        <div class="flex items-center gap-3 bg-slate-800/50 p-3 rounded-xl border border-slate-700">
+                        <div class="flex items-center gap-3 bg-white/5 p-3 rounded-xl border border-white/10">
                             <i data-lucide="smartphone" class="w-5 h-5 text-white"></i><span class="text-white text-sm font-medium">App Móvil</span>
                         </div>
                     </div>
@@ -347,13 +519,13 @@
                 <div class="lg:w-1/2 w-full reveal delay-100">
                     <div class="relative group">
                         <!-- Resplandor de fondo (Brillo Naranja) -->
-                        <div class="absolute -inset-1 bg-gradient-to-r from-brand-orange to-yellow-400 rounded-[28px] blur opacity-25 group-hover:opacity-60 transition duration-1000 group-hover:duration-200"></div>
+                        <div class="absolute -inset-1 bg-gradient-to-r from-[#EF4444] to-[#F59E0B] rounded-[28px] blur opacity-25 group-hover:opacity-60 transition duration-1000 group-hover:duration-200"></div>
                         
                         <!-- Caja principal del reproductor -->
-                        <div class="relative bg-slate-800 p-2 rounded-3xl border border-slate-700 shadow-2xl">
+                        <div class="relative bg-[#0A1C3C] p-2 rounded-3xl border border-white/10 shadow-2xl">
                             
                             <!-- Etiqueta ROJA Parpadeante de EN VIVO -->
-                            <div class="absolute top-4 right-4 z-20 bg-red-500/90 backdrop-blur-md text-white text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg border border-red-400">
+                            <div class="absolute top-4 right-4 z-20 bg-[#EF4444]/90 backdrop-blur-md text-white text-[10px] md:text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg border border-[#EF4444]">
                                 <span class="w-2 h-2 bg-white rounded-full animate-pulse"></span> TRANSMISIÓN EN VIVO
                             </div>
                             
@@ -370,11 +542,11 @@
                             
                             <!-- Controles y botón de acción debajo de la cámara -->
                             <div class="mt-4 flex flex-col sm:flex-row justify-between items-center gap-4 px-2 pb-2">
-                                <div class="flex items-center gap-2 text-slate-300 text-sm font-medium">
-                                    <i data-lucide="cctv" class="w-5 h-5 text-brand-orange"></i>
+                                <div class="flex items-center gap-2 text-[#D1D5DB] text-sm font-medium">
+                                    <i data-lucide="cctv" class="w-5 h-5 text-[#F79F1F]"></i>
                                     Cámara Pública Alfatel
                                 </div>
-                                <button onclick="contratarPlan('Interesado en combos ALFACAM')" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-brand text-white font-bold hover:scale-105 active:scale-95 transition-all text-sm shadow-lg shadow-orange-500/30">
+                                <button onclick="contratarPlan('Interesado en combos ALFACAM')" class="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-brand text-white font-bold hover:scale-105 active:scale-95 transition-all text-sm shadow-lg shadow-[#F79F1F]/30">
                                     Quiero mi cámara
                                 </button>
                             </div>
@@ -388,41 +560,49 @@
     </section>
 
     <!-- Footer -->
-    <footer id="contacto" class="bg-slate-950 text-slate-400 py-12 md:py-16 border-t border-slate-900">
+    <footer id="contacto" class="bg-[#030B19] text-[#D1D5DB] py-12 md:py-16 border-t border-[#F79F1F]/20">
         <div class="container mx-auto px-4 md:px-6">
             <div class="grid grid-cols-1 md:grid-cols-4 gap-8 md:gap-12 mb-12 text-center md:text-left">
                 <div class="col-span-1 md:col-span-2">
                     
-                    <div class="flex items-center justify-center md:justify-start gap-2 mb-6">
-                        <div class="bg-white p-2 rounded-2xl shadow-lg inline-flex">
-                            <img src="/logo-alfatel.png" alt="Logo Alfatel" class="h-32 md:h-40 w-auto object-contain">
-                        </div>
-                    </div>
+                    <div class="flex items-center justify-center md:justify-start mb-6">
+    <a
+        href="#inicio"
+        class="brand-logo brand-logo--footer"
+        aria-label="ALFATEL - Ir al inicio"
+    >
+        <img
+            src="/logo-alfatel.png"
+            alt="Logo ALFATEL"
+            class="brand-logo__image brand-logo__image--footer"
+        >
+    </a>
+</div>
                     
                     <p class="mb-6 max-w-sm mx-auto md:mx-0 text-sm">Conectando a Ecuador con la tecnología del futuro. Proveedor líder en fibra óptica.</p>
                     <div class="flex justify-center md:justify-start gap-4">
-                        <a href="#" class="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center hover:bg-brand-orange hover:text-white transition-all"><i data-lucide="facebook" class="w-5 h-5"></i></a>
-                        <a href="#" class="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center hover:bg-brand-orange hover:text-white transition-all"><i data-lucide="instagram" class="w-5 h-5"></i></a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#F79F1F] hover:text-white transition-all"><i data-lucide="facebook" class="w-5 h-5"></i></a>
+                        <a href="#" class="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-[#F79F1F] hover:text-white transition-all"><i data-lucide="instagram" class="w-5 h-5"></i></a>
                     </div>
                 </div>
                 <div>
                     <h4 class="text-white font-bold mb-6">Servicios</h4>
                     <ul class="space-y-3 text-sm">
-                        <li><a href="#fibra" class="hover:text-brand-orange transition-colors">Fibra Óptica</a></li>
-                        <li><a href="#antena" class="hover:text-brand-orange transition-colors">Internet Rural</a></li>
-                        <li><a href="#alfacam" class="hover:text-brand-orange transition-colors">Seguridad ALFACAM</a></li>
+                        <li><a href="#fibra" class="hover:text-[#F79F1F] transition-colors">Fibra Óptica</a></li>
+                        <li><a href="#antena" class="hover:text-[#F79F1F] transition-colors">Internet Rural</a></li>
+                        <li><a href="#alfacam" class="hover:text-[#F79F1F] transition-colors">Seguridad ALFACAM</a></li>
                     </ul>
                 </div>
                 <div>
                     <h4 class="text-white font-bold mb-6">Contacto</h4>
                     <ul class="space-y-4 text-sm">
-                        <li class="flex items-start justify-center md:justify-start gap-3"><i data-lucide="map-pin" class="w-5 h-5 text-brand-orange shrink-0"></i><span>Oficina Principal, Calle Olmedo Y los Andes-Radio Horizonte</span></li>
-                        <li class="flex items-center justify-center md:justify-start gap-3"><i data-lucide="phone" class="w-5 h-5 text-brand-orange shrink-0"></i><span>+593 982246998</span></li>
+                        <li class="flex items-start justify-center md:justify-start gap-3"><i data-lucide="map-pin" class="w-5 h-5 text-[#F79F1F] shrink-0"></i><span>Oficina Principal, Calle Olmedo Y los Andes-Radio Horizonte</span></li>
+                        <li class="flex items-center justify-center md:justify-start gap-3"><i data-lucide="phone" class="w-5 h-5 text-[#F79F1F] shrink-0"></i><span>+593 982246998</span></li>
                     </ul>
                 </div>
             </div>
-            <div class="border-t border-slate-900 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs md:text-sm">
-                <p>&copy; 2025 ALFATEL.</p>
+            <div class="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs md:text-sm">
+                <p>&copy; 2026 ALFATEL.</p>
                 <div class="flex gap-6">
                     <a href="politica.html" target="_blank" class="hover:text-white hover:underline">Términos y Privacidad</a>
                 </div>
@@ -440,20 +620,20 @@
     <script type="module" src="/src/main.js"></script>
 
     <!-- Menú Móvil -->
-    <div id="mobile-menu" class="fixed inset-0 bg-white/95 backdrop-blur-xl z-[90] transform translate-x-full transition-transform duration-300 md:hidden flex flex-col justify-center items-center gap-8 opacity-0 pointer-events-none">
-        <button onclick="toggleMenu()" class="absolute top-4 right-4 p-2 bg-slate-100 rounded-full text-slate-500 hover:text-brand-orange transition-colors">
+    <div id="mobile-menu" class="fixed inset-0 bg-[#0A1C3C]/98 backdrop-blur-xl z-[90] transform translate-x-full transition-transform duration-300 md:hidden flex flex-col justify-center items-center gap-8 opacity-0 pointer-events-none">
+        <button onclick="toggleMenu()" class="absolute top-4 right-4 p-2 bg-white/10 rounded-full text-[#D1D5DB] hover:text-[#F79F1F] transition-colors">
             <i data-lucide="x" class="w-8 h-8"></i>
         </button>
 
-        <a href="#inicio" class="text-3xl font-bold text-slate-800 hover:text-brand-orange transition-colors" onclick="toggleMenu()">Inicio</a>
-        <a href="#fibra" class="text-3xl font-bold text-slate-800 hover:text-brand-orange transition-colors" onclick="toggleMenu()">Fibra Óptica</a>
-        <a href="#antena" class="text-3xl font-bold text-slate-800 hover:text-brand-orange transition-colors" onclick="toggleMenu()">Internet Aire</a>
+        <a href="#inicio" class="text-3xl font-bold text-white hover:text-[#F79F1F] transition-colors" onclick="toggleMenu()">Inicio</a>
+        <a href="#fibra" class="text-3xl font-bold text-white hover:text-[#F79F1F] transition-colors" onclick="toggleMenu()">Fibra Óptica</a>
+        <a href="#antena" class="text-3xl font-bold text-white hover:text-[#F79F1F] transition-colors" onclick="toggleMenu()">Internet Aire</a>
         
-        <button onclick="toggleModal(); toggleMenu()" class="text-3xl font-bold text-brand-orange flex items-center gap-3">
+        <button onclick="toggleModal(); toggleMenu()" class="text-3xl font-bold text-[#F79F1F] flex items-center gap-3">
             <i data-lucide="user-circle" class="w-8 h-8"></i> Zona Clientes
         </button>
         
-        <a href="#contacto" class="mt-6 px-10 py-4 rounded-full bg-slate-900 text-white text-xl font-bold shadow-xl active:scale-95 transition-transform" onclick="toggleMenu()">
+        <a href="#contacto" class="mt-6 px-10 py-4 rounded-full bg-gradient-brand text-white text-xl font-bold shadow-xl active:scale-95 transition-transform" onclick="toggleMenu()">
             Contáctanos
         </a>
     </div>
