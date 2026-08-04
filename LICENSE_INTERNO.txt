@@ -1,0 +1,13 @@
+ALFATEL WEB 2030
+Versión oficial congelada V4.3.2 FINAL
+
+Proyecto de uso exclusivo de ALFATEL.
+
+Este paquete constituye la base estable aprobada para publicación y para el
+desarrollo de futuras versiones. No se deben incorporar cambios directamente
+sobre el tag v4.3.2-final. Toda mejora posterior debe realizarse en una nueva
+rama o versión y someterse al proceso de crear, probar, aprobar y congelar.
+
+ALFATEL
+San Gabriel, Carchi, Ecuador
+Julio de 2026
